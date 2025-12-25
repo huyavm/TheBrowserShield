@@ -7,22 +7,22 @@ class BrowserShieldAdmin {
         this.logs = [];
         this.currentSection = 'profiles';
         this.refreshInterval = null;
-        
+
         this.init();
     }
 
     async init() {
         console.log('Initializing BrowserShield Admin...');
-        
+
         // Setup event handlers
         this.setupEventHandlers();
-        
+
         // Load initial data
         await this.loadInitialData();
-        
+
         // Start auto-refresh
         this.startAutoRefresh();
-        
+
         console.log('Admin interface initialized');
     }
 
@@ -59,15 +59,20 @@ class BrowserShieldAdmin {
             const data = await response.json();
             if (data.success) {
                 const mode = data.data.currentMode;
-                const modeDisplay = mode === 'mock' ? 'Mock Mode' : 
-                                  mode === 'production' ? 'Production Mode' : 
-                                  mode === 'firefox' ? 'Firefox Mode' : 'Unknown Mode';
-                
-                // Update mode display in header
+                const modeDisplay = mode === 'mock' ? 'Mock Mode' :
+                    mode === 'production' ? 'Production Mode' :
+                        mode === 'firefox' ? 'Firefox Mode' : 'Unknown Mode';
+
+                // Update mode display in navbar
                 const modeIndicator = document.querySelector('.mode-indicator');
                 if (modeIndicator) {
                     modeIndicator.textContent = modeDisplay;
-                    modeIndicator.className = `mode-indicator badge bg-${mode === 'mock' ? 'warning' : mode === 'firefox' ? 'success' : 'primary'}`;
+                }
+
+                // Update mode badge in stats section
+                const currentModeEl = document.getElementById('currentMode');
+                if (currentModeEl) {
+                    currentModeEl.textContent = modeDisplay;
                 }
             }
         } catch (error) {
@@ -80,7 +85,7 @@ class BrowserShieldAdmin {
             console.log('Loading profiles...');
             const response = await fetch(`${this.baseUrl}/api/profiles`);
             const data = await response.json();
-            
+
             // Handle different response formats
             if (data.success && data.data) {
                 this.profiles = data.data;
@@ -91,7 +96,7 @@ class BrowserShieldAdmin {
             } else {
                 this.profiles = [];
             }
-            
+
             this.renderProfiles();
             console.log(`Loaded ${this.profiles.length} profiles`);
         } catch (error) {
@@ -104,7 +109,7 @@ class BrowserShieldAdmin {
         try {
             const response = await fetch(`${this.baseUrl}/api/profiles/sessions/active`);
             const data = await response.json();
-            
+
             // Handle different response formats
             if (data.success && data.data) {
                 this.sessions = data.data;
@@ -115,7 +120,7 @@ class BrowserShieldAdmin {
             } else {
                 this.sessions = [];
             }
-            
+
             this.renderSessions();
             console.log(`Loaded ${this.sessions.length} active sessions`);
         } catch (error) {
@@ -133,7 +138,7 @@ class BrowserShieldAdmin {
                 { timestamp: new Date(Date.now() - 600000).toISOString(), action: 'Profile Updated', details: 'Profile settings updated', profileId: 'mock-1' },
                 { timestamp: new Date(Date.now() - 900000).toISOString(), action: 'Session Stopped', details: 'Browser session stopped', profileId: 'mock-3' }
             ];
-            
+
             this.logs = mockLogs;
             this.renderLogs();
         } catch (error) {
@@ -148,13 +153,13 @@ class BrowserShieldAdmin {
             if (totalProfilesEl) {
                 totalProfilesEl.textContent = this.profiles.length;
             }
-            
+
             // Safely update active sessions count
             const activeSessionsEl = document.getElementById('activeSessions');
             if (activeSessionsEl) {
                 activeSessionsEl.textContent = this.sessions.length;
             }
-            
+
             // Load current mode safely
             try {
                 const modeResponse = await fetch(`${this.baseUrl}/api/mode`);
@@ -170,13 +175,13 @@ class BrowserShieldAdmin {
                     currentModeEl.textContent = 'MOCK';
                 }
             }
-            
+
             // Safely update proxy count
             const totalProxiesEl = document.getElementById('totalProxies');
             if (totalProxiesEl) {
                 totalProxiesEl.textContent = '5';
             }
-            
+
             // Safely update uptime
             try {
                 const response = await fetch(`${this.baseUrl}/health`);
@@ -195,7 +200,7 @@ class BrowserShieldAdmin {
 
     renderProfiles() {
         const container = document.getElementById('profilesContainer');
-        
+
         if (this.profiles.length === 0) {
             container.innerHTML = `
                 <div class="text-center p-4">
@@ -213,7 +218,7 @@ class BrowserShieldAdmin {
         const profilesHtml = this.profiles.map(profile => {
             const isActive = this.sessions.some(session => session.profileId === profile.id);
             const activeSession = this.sessions.find(session => session.profileId === profile.id);
-            
+
             return `
                 <div class="profile-card card mb-3 ${isActive ? 'active' : ''}">
                     <div class="card-body">
@@ -236,14 +241,14 @@ class BrowserShieldAdmin {
                             </div>
                             <div class="col-md-4 text-end">
                                 <div class="btn-group" role="group">
-                                    ${isActive ? 
-                                        `<button class="btn btn-sm btn-outline-danger btn-action" onclick="browserShieldAdmin.stopSession('${profile.id}')">
+                                    ${isActive ?
+                    `<button class="btn btn-sm btn-outline-danger btn-action" onclick="browserShieldAdmin.stopSession('${profile.id}')">
                                             <i class="fas fa-stop"></i> Stop
                                         </button>` :
-                                        `<button class="btn btn-sm btn-outline-success btn-action" onclick="browserShieldAdmin.startSession('${profile.id}')">
+                    `<button class="btn btn-sm btn-outline-success btn-action" onclick="browserShieldAdmin.startSession('${profile.id}')">
                                             <i class="fas fa-play"></i> Start
                                         </button>`
-                                    }
+                }
                                     <button class="btn btn-sm btn-outline-primary btn-action" onclick="browserShieldAdmin.showProfileDetails('${profile.id}')">
                                         <i class="fas fa-eye"></i> View
                                     </button>
@@ -269,7 +274,7 @@ class BrowserShieldAdmin {
 
     renderSessions() {
         const container = document.getElementById('sessionsContainer');
-        
+
         if (this.sessions.length === 0) {
             container.innerHTML = `
                 <div class="text-center p-4">
@@ -284,7 +289,7 @@ class BrowserShieldAdmin {
         const sessionsHtml = this.sessions.map(session => {
             const profile = this.profiles.find(p => p.id === session.profileId);
             const profileName = profile ? profile.name : 'Unknown Profile';
-            
+
             return `
                 <div class="card mb-3">
                     <div class="card-body">
@@ -327,7 +332,7 @@ class BrowserShieldAdmin {
 
     renderLogs() {
         const container = document.getElementById('activityLogs');
-        
+
         if (this.logs.length === 0) {
             container.innerHTML = `
                 <div class="text-center p-4">
@@ -374,13 +379,13 @@ class BrowserShieldAdmin {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 this.showToast('Profile created successfully', 'success');
                 this.hideCreateProfile();
                 await this.loadProfiles();
                 await this.updateStats();
-                
+
                 // Add to logs
                 this.logs.unshift({
                     timestamp: new Date().toISOString(),
@@ -416,13 +421,13 @@ class BrowserShieldAdmin {
 
             const data = await response.json();
             console.log('Start session response:', data);
-            
+
             if (data.success) {
                 this.showToast(`Browser session started successfully${data.message ? ': ' + data.message : ''}`, 'success');
                 await this.loadSessions();
                 await this.loadProfiles();
                 await this.updateStats();
-                
+
                 // Add to logs
                 const profile = this.profiles.find(p => p.id === profileId);
                 this.logs.unshift({
@@ -456,13 +461,13 @@ class BrowserShieldAdmin {
 
             const data = await response.json();
             console.log('Stop session response:', data);
-            
+
             if (data.success) {
                 this.showToast(`Browser session stopped successfully${data.message ? ': ' + data.message : ''}`, 'success');
                 await this.loadSessions();
                 await this.loadProfiles();
                 await this.updateStats();
-                
+
                 // Add to logs
                 const profile = this.profiles.find(p => p.id === profileId);
                 this.logs.unshift({
@@ -492,12 +497,12 @@ class BrowserShieldAdmin {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 this.showToast('Profile deleted successfully', 'success');
                 await this.loadProfiles();
                 await this.updateStats();
-                
+
                 // Add to logs
                 this.logs.unshift({
                     timestamp: new Date().toISOString(),
@@ -520,7 +525,7 @@ class BrowserShieldAdmin {
         if (!profile) return;
 
         const session = this.sessions.find(s => s.profileId === profileId);
-        
+
         const modalBody = document.getElementById('profileModalBody');
         modalBody.innerHTML = `
             <div class="row">
@@ -585,7 +590,7 @@ class BrowserShieldAdmin {
         document.querySelectorAll('.nav-link').forEach(link => {
             link.classList.remove('active');
         });
-        
+
         const activeLink = document.querySelector(`a[href="#${sectionName}"]`);
         if (activeLink) {
             activeLink.classList.add('active');
@@ -614,7 +619,7 @@ class BrowserShieldAdmin {
         this.refreshInterval = setInterval(async () => {
             await this.loadSessions();
             await this.updateStats();
-            
+
             if (this.currentSection === 'profiles') {
                 this.renderProfiles();
             } else if (this.currentSection === 'sessions') {
@@ -626,7 +631,7 @@ class BrowserShieldAdmin {
     showToast(message, type = 'info') {
         const toastContainer = document.getElementById('toastContainer');
         const toastId = 'toast-' + Date.now();
-        
+
         const bgClass = {
             'success': 'bg-success',
             'error': 'bg-danger',
@@ -642,13 +647,13 @@ class BrowserShieldAdmin {
                 </div>
             </div>
         `;
-        
+
         toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-        
+
         const toastElement = document.getElementById(toastId);
         const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
         toast.show();
-        
+
         toastElement.addEventListener('hidden.bs.toast', () => {
             toastElement.remove();
         });

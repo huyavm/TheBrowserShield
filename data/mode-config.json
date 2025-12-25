@@ -1,11 +1,9 @@
 {
-  "mode": "mock",
-  "lastChanged": "2025-06-27T02:47:00.000Z",
-  "capabilities": {
-    "profileManagement": true,
-    "sessionSimulation": true,
-    "apiTesting": true,
-    "fastestPerformance": true,
-    "highestReliability": true
-  }
+  "mode": "firefox",
+  "lastChanged": "2025-12-24T17:25:59.825Z",
+  "capabilities": [
+    "Firefox automation",
+    "Alternative fingerprinting",
+    "Website interaction"
+  ]
 }

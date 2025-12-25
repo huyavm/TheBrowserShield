@@ -3,6 +3,15 @@ const ProfileService = require('../services/ProfileService');
 const BrowserService = require('../services/BrowserService');
 const ProfileLogService = require('../services/ProfileLogService');
 const logger = require('../utils/logger');
+const {
+    validate,
+    createProfileSchema,
+    updateProfileSchema,
+    startBrowserSchema,
+    navigateSchema,
+    executeScriptSchema
+} = require('../middleware/validation');
+const { endpointRateLimits } = require('../middleware/performance');
 
 const router = express.Router();
 
@@ -31,10 +40,10 @@ router.get('/', async (req, res, next) => {
  * POST /api/profiles
  * Create new profile
  */
-router.post('/', async (req, res, next) => {
+router.post('/', endpointRateLimits.profileCreate, validate(createProfileSchema), async (req, res, next) => {
     try {
         const profile = await ProfileService.createProfile(req.body);
-        
+
         // Log profile creation
         await ProfileLogService.logActivity(profile.id, 'PROFILE_CREATED', {
             profileName: profile.name,
@@ -43,7 +52,7 @@ router.post('/', async (req, res, next) => {
             hasProxy: !!profile.proxy,
             spoofFingerprint: profile.spoofFingerprint
         });
-        
+
         res.status(201).json({
             success: true,
             data: profile,
@@ -67,7 +76,7 @@ router.get('/:id', async (req, res, next) => {
                 message: 'Profile not found'
             });
         }
-        
+
         res.json({
             success: true,
             data: profile
@@ -81,7 +90,7 @@ router.get('/:id', async (req, res, next) => {
  * PUT /api/profiles/:id
  * Update profile
  */
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', endpointRateLimits.profileUpdate, validate(updateProfileSchema), async (req, res, next) => {
     try {
         const profile = await ProfileService.updateProfile(req.params.id, req.body);
         if (!profile) {
@@ -90,7 +99,7 @@ router.put('/:id', async (req, res, next) => {
                 message: 'Profile not found'
             });
         }
-        
+
         res.json({
             success: true,
             data: profile,
@@ -105,7 +114,7 @@ router.put('/:id', async (req, res, next) => {
  * DELETE /api/profiles/:id
  * Delete profile
  */
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', endpointRateLimits.profileDelete, async (req, res, next) => {
     try {
         // Stop browser if running
         try {
@@ -113,7 +122,7 @@ router.delete('/:id', async (req, res, next) => {
         } catch (error) {
             // Ignore error if browser is not running
         }
-        
+
         const deleted = await ProfileService.deleteProfile(req.params.id);
         if (!deleted) {
             return res.status(404).json({
@@ -121,7 +130,7 @@ router.delete('/:id', async (req, res, next) => {
                 message: 'Profile not found'
             });
         }
-        
+
         res.json({
             success: true,
             message: 'Profile deleted successfully'
@@ -135,11 +144,11 @@ router.delete('/:id', async (req, res, next) => {
  * POST /api/profiles/:id/start
  * Start browser with profile
  */
-router.post('/:id/start', async (req, res, next) => {
+router.post('/:id/start', endpointRateLimits.browserStart, validate(startBrowserSchema), async (req, res, next) => {
     try {
         const { autoNavigateUrl } = req.body;
         const sessionInfo = await browserService.startBrowser(req.params.id, autoNavigateUrl);
-        
+
         // Log browser start
         await profileLogService.logActivity(req.params.id, 'BROWSER_STARTED', {
             ip: req.ip,
@@ -150,7 +159,7 @@ router.post('/:id/start', async (req, res, next) => {
                 profileName: sessionInfo.profileName
             }
         });
-        
+
         res.json({
             success: true,
             data: sessionInfo,
@@ -174,13 +183,13 @@ router.post('/:id/stop', async (req, res, next) => {
                 message: 'No active browser session found for this profile'
             });
         }
-        
+
         // Log browser stop
         await ProfileLogService.logActivity(req.params.id, 'BROWSER_STOPPED', {
             ip: req.ip,
             userAgent: req.get('User-Agent')
         });
-        
+
         res.json({
             success: true,
             message: 'Browser stopped successfully'
@@ -206,7 +215,7 @@ router.get('/:id/status', async (req, res, next) => {
                 }
             });
         }
-        
+
         res.json({
             success: true,
             data: status
@@ -237,18 +246,12 @@ router.get('/sessions/active', async (req, res, next) => {
  * POST /api/profiles/:id/navigate
  * Navigate to URL in browser
  */
-router.post('/:id/navigate', async (req, res, next) => {
+router.post('/:id/navigate', endpointRateLimits.browserNavigate, validate(navigateSchema), async (req, res, next) => {
     try {
         const { url } = req.body;
-        if (!url) {
-            return res.status(400).json({
-                success: false,
-                message: 'URL is required'
-            });
-        }
-        
+
         const result = await browserService.navigateToUrl(req.params.id, url);
-        
+
         // Log navigation
         await profileLogService.logActivity(req.params.id, 'NAVIGATION', {
             url,
@@ -259,7 +262,7 @@ router.post('/:id/navigate', async (req, res, next) => {
                 title: result.title
             }
         });
-        
+
         res.json({
             success: true,
             data: result,
@@ -274,18 +277,12 @@ router.post('/:id/navigate', async (req, res, next) => {
  * POST /api/profiles/:id/execute
  * Execute JavaScript in browser
  */
-router.post('/:id/execute', async (req, res, next) => {
+router.post('/:id/execute', endpointRateLimits.browserExecute, validate(executeScriptSchema), async (req, res, next) => {
     try {
         const { script } = req.body;
-        if (!script) {
-            return res.status(400).json({
-                success: false,
-                message: 'Script is required'
-            });
-        }
-        
+
         const result = await browserService.executeScript(req.params.id, script);
-        
+
         // Log script execution
         await profileLogService.logActivity(req.params.id, 'SCRIPT_EXECUTED', {
             script: script.substring(0, 200) + (script.length > 200 ? '...' : ''),
@@ -293,7 +290,7 @@ router.post('/:id/execute', async (req, res, next) => {
             userAgent: req.get('User-Agent'),
             resultType: typeof result
         });
-        
+
         res.json({
             success: true,
             data: result,
@@ -312,7 +309,7 @@ router.get('/:id/logs', async (req, res, next) => {
     try {
         const limit = parseInt(req.query.limit) || 50;
         const logs = await profileLogService.getProfileLogs(req.params.id, limit);
-        
+
         res.json({
             success: true,
             data: logs,
@@ -331,7 +328,7 @@ router.get('/system/logs', async (req, res, next) => {
     try {
         const limit = parseInt(req.query.limit) || 100;
         const logs = await profileLogService.getActivityLogs(limit);
-        
+
         res.json({
             success: true,
             data: logs,
@@ -353,7 +350,7 @@ router.get('/system/stats', async (req, res, next) => {
             Promise.resolve(browserService.getAllActiveSessions()),
             profileLogService.getLogStats()
         ]);
-        
+
         const stats = {
             profiles: {
                 total: profiles.length,
@@ -372,7 +369,7 @@ router.get('/system/stats', async (req, res, next) => {
                 platform: process.platform
             }
         };
-        
+
         res.json({
             success: true,
             data: stats

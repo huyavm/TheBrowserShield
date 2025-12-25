@@ -1,4 +1,3 @@
-const { jest } = require('@jest/globals');
 const BrowserService = require('../../services/BrowserService');
 const ProfileService = require('../../services/ProfileService');
 
@@ -8,7 +7,7 @@ jest.mock('../../config/puppeteer');
 
 describe('BrowserService', () => {
     let browserService;
-    
+
     beforeEach(() => {
         browserService = new BrowserService();
         jest.clearAllMocks();
@@ -33,13 +32,13 @@ describe('BrowserService', () => {
 
             // Mock createBrowserWithProfile to simulate slow operation
             const { createBrowserWithProfile } = require('../../config/puppeteer');
-            createBrowserWithProfile.mockImplementation(() => 
+            createBrowserWithProfile.mockImplementation(() =>
                 new Promise(resolve => setTimeout(() => resolve({
-                    browser: { 
+                    browser: {
                         on: jest.fn(),
                         close: jest.fn()
                     },
-                    page: { 
+                    page: {
                         goto: jest.fn().mockResolvedValue(),
                         url: jest.fn().mockReturnValue('https://example.com'),
                         title: jest.fn().mockResolvedValue('Test Page')

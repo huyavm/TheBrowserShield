@@ -100,7 +100,7 @@ const systemHealthMonitor = () => {
     // Log system health every 5 minutes
     setInterval(() => {
         const health = getSystemHealth();
-        
+
         // Check for memory issues
         if (health.memory.heapUsagePercent > 90) {
             logger.warn('High memory usage detected', {
@@ -164,7 +164,7 @@ const createRateLimiter = (options = {}) => {
         // Check if limit exceeded
         if (clientData.count >= max) {
             const remaining = Math.ceil((clientData.resetTime - now) / 1000);
-            
+
             logger.warn('Rate limit exceeded', {
                 ip: key,
                 count: clientData.count,
@@ -184,6 +184,7 @@ const createRateLimiter = (options = {}) => {
             }
 
             return res.status(429).json({
+                success: false,
                 error: message,
                 retryAfter: remaining
             });
@@ -205,15 +206,90 @@ const createRateLimiter = (options = {}) => {
 };
 
 /**
+ * Per-endpoint rate limiting configurations
+ */
+const endpointRateLimits = {
+    // Browser operations - more restrictive (expensive operations)
+    browserStart: createRateLimiter({
+        windowMs: 60 * 1000,    // 1 minute
+        max: 5,                 // 5 starts per minute
+        message: 'Too many browser start requests. Please wait before starting another browser.'
+    }),
+    browserStop: createRateLimiter({
+        windowMs: 60 * 1000,    // 1 minute
+        max: 10,                // 10 stops per minute
+        message: 'Too many browser stop requests.'
+    }),
+    browserExecute: createRateLimiter({
+        windowMs: 60 * 1000,    // 1 minute
+        max: 30,                // 30 script executions per minute
+        message: 'Too many script execution requests.'
+    }),
+    browserNavigate: createRateLimiter({
+        windowMs: 60 * 1000,    // 1 minute
+        max: 20,                // 20 navigations per minute
+        message: 'Too many navigation requests.'
+    }),
+
+    // Profile CRUD - moderate limits
+    profileCreate: createRateLimiter({
+        windowMs: 60 * 1000,    // 1 minute
+        max: 10,                // 10 creates per minute
+        message: 'Too many profile creation requests.'
+    }),
+    profileUpdate: createRateLimiter({
+        windowMs: 60 * 1000,    // 1 minute
+        max: 30,                // 30 updates per minute
+        message: 'Too many profile update requests.'
+    }),
+    profileDelete: createRateLimiter({
+        windowMs: 60 * 1000,    // 1 minute
+        max: 10,                // 10 deletes per minute
+        message: 'Too many profile delete requests.'
+    }),
+    profileRead: createRateLimiter({
+        windowMs: 60 * 1000,    // 1 minute
+        max: 100,               // 100 reads per minute
+        message: 'Too many profile read requests.'
+    }),
+
+    // Proxy operations
+    proxyAdd: createRateLimiter({
+        windowMs: 60 * 1000,    // 1 minute
+        max: 20,                // 20 adds per minute
+        message: 'Too many proxy add requests.'
+    }),
+    proxyTest: createRateLimiter({
+        windowMs: 60 * 1000,    // 1 minute
+        max: 10,                // 10 tests per minute
+        message: 'Too many proxy test requests.'
+    }),
+
+    // Mode switching - very restrictive
+    modeSwitch: createRateLimiter({
+        windowMs: 60 * 1000,    // 1 minute
+        max: 3,                 // 3 switches per minute
+        message: 'Too many mode switch requests. Server restart is required after each switch.'
+    }),
+
+    // Default/fallback
+    default: createRateLimiter({
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        max: 100,
+        message: 'Too many requests, please try again later.'
+    })
+};
+
+/**
  * Request tracking for debugging
  */
 const requestTracker = (req, res, next) => {
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     req.requestId = requestId;
-    
+
     // Add request ID to response headers
     res.set('X-Request-ID', requestId);
-    
+
     // Log request start
     logger.debug('Request started', {
         requestId,
@@ -232,5 +308,6 @@ module.exports = {
     performanceMonitor,
     systemHealthMonitor,
     createRateLimiter,
+    endpointRateLimits,
     requestTracker
 };

@@ -1,5 +1,7 @@
 const express = require('express');
 const ModeSwitcher = require('../config/mode-switcher');
+const { validate, switchModeSchema } = require('../middleware/validation');
+const { endpointRateLimits } = require('../middleware/performance');
 
 const router = express.Router();
 const modeSwitcher = new ModeSwitcher();
@@ -27,19 +29,12 @@ router.get('/', (req, res) => {
  * POST /api/mode/switch
  * Switch to a different mode
  */
-router.post('/switch', (req, res) => {
+router.post('/switch', endpointRateLimits.modeSwitch, validate(switchModeSchema), (req, res) => {
     try {
         const { mode } = req.body;
-        
-        if (!mode) {
-            return res.status(400).json({
-                success: false,
-                error: 'Mode is required'
-            });
-        }
 
         const result = modeSwitcher.switchMode(mode);
-        
+
         if (result.success) {
             res.json({
                 success: true,

@@ -1,70 +1,123 @@
 const logger = require('../utils/logger');
+const { AppError, ErrorCodes, getErrorMessage, createErrorResponse } = require('../utils/errors');
 
 /**
- * Global error handling middleware
+ * Get preferred language from request
+ */
+function getPreferredLanguage(req) {
+    // Check query parameter
+    if (req.query.lang && ['en', 'vi'].includes(req.query.lang)) {
+        return req.query.lang;
+    }
+    // Check Accept-Language header
+    const acceptLang = req.get('Accept-Language') || '';
+    if (acceptLang.includes('vi')) return 'vi';
+    return 'en';
+}
+
+/**
+ * Global error handling middleware with bilingual support
  */
 function errorHandler(error, req, res, next) {
-    logger.error('Unhandled error:', {
+    const lang = getPreferredLanguage(req);
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+
+    // Log error
+    logger.error('Error occurred:', {
+        code: error.code,
         message: error.message,
-        stack: error.stack,
+        stack: isDevelopment ? error.stack : undefined,
         url: req.url,
         method: req.method,
         ip: req.ip,
-        userAgent: req.get('User-Agent')
+        requestId: req.requestId
     });
 
-    // Don't expose internal errors in production
-    const isDevelopment = process.env.NODE_ENV !== 'production';
-    
-    // Default error response
+    // Handle AppError instances
+    if (error instanceof AppError) {
+        return res.status(error.statusCode).json(error.toJSON(lang));
+    }
+
+    // Map common error patterns to AppError codes
+    let errorCode = ErrorCodes.INTERNAL_ERROR;
     let statusCode = 500;
-    let message = 'Internal server error';
     let details = null;
 
-    // Handle specific error types
-    if (error.name === 'ValidationError') {
+    // Pattern matching for error messages
+    if (error.message) {
+        const msg = error.message.toLowerCase();
+
+        if (msg.includes('not found') || msg.includes('không tìm thấy')) {
+            if (msg.includes('profile')) {
+                errorCode = ErrorCodes.PROFILE_NOT_FOUND;
+            } else if (msg.includes('proxy')) {
+                errorCode = ErrorCodes.PROXY_NOT_FOUND;
+            }
+            statusCode = 404;
+        } else if (msg.includes('already exists') || msg.includes('đã tồn tại')) {
+            if (msg.includes('profile')) {
+                errorCode = ErrorCodes.PROFILE_NAME_EXISTS;
+            } else if (msg.includes('proxy')) {
+                errorCode = ErrorCodes.PROXY_EXISTS;
+            }
+            statusCode = 409;
+        } else if (msg.includes('already running')) {
+            errorCode = ErrorCodes.BROWSER_ALREADY_RUNNING;
+            statusCode = 409;
+        } else if (msg.includes('no active browser') || msg.includes('not running')) {
+            errorCode = ErrorCodes.BROWSER_NOT_RUNNING;
+            statusCode = 404;
+        } else if (msg.includes('validation') || error.name === 'ZodError') {
+            errorCode = ErrorCodes.VALIDATION_FAILED;
+            statusCode = 400;
+            details = error.errors || error.message;
+        }
+    }
+
+    // Handle Zod validation errors
+    if (error.name === 'ZodError') {
+        errorCode = ErrorCodes.VALIDATION_FAILED;
         statusCode = 400;
-        message = 'Validation error';
-        details = error.message;
-    } else if (error.message && error.message.includes('not found')) {
-        statusCode = 404;
-        message = error.message;
-    } else if (error.message && error.message.includes('already running')) {
-        statusCode = 409;
-        message = error.message;
-    } else if (error.message && error.message.includes('required')) {
-        statusCode = 400;
-        message = error.message;
-    } else if (error.code === 'ECONNREFUSED') {
+        details = error.errors;
+    }
+
+    // Handle SQLite errors
+    if (error.code && error.code.startsWith('SQLITE_')) {
+        if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+            errorCode = ErrorCodes.PROFILE_NAME_EXISTS;
+            statusCode = 409;
+        } else {
+            errorCode = ErrorCodes.DATABASE_ERROR;
+            statusCode = 500;
+        }
+    }
+
+    // Handle network errors
+    if (error.code === 'ECONNREFUSED') {
         statusCode = 503;
-        message = 'Service temporarily unavailable';
         details = isDevelopment ? 'Connection refused' : null;
-    } else if (error.code === 'ENOTFOUND') {
-        statusCode = 502;
-        message = 'Bad gateway';
-        details = isDevelopment ? 'DNS resolution failed' : null;
     } else if (error.code === 'ETIMEDOUT') {
         statusCode = 504;
-        message = 'Gateway timeout';
         details = isDevelopment ? 'Operation timed out' : null;
     }
 
+    // Build error response
     const errorResponse = {
         success: false,
-        message,
+        error: {
+            code: errorCode,
+            message: getErrorMessage(errorCode, lang),
+            details: isDevelopment || statusCode < 500 ? details : null
+        },
         timestamp: new Date().toISOString(),
         path: req.path,
-        method: req.method
+        method: req.method,
+        requestId: req.requestId
     };
 
-    // Add details in development mode or for client errors
-    if (isDevelopment || statusCode < 500) {
-        if (details) {
-            errorResponse.details = details;
-        }
-        if (isDevelopment && error.stack) {
-            errorResponse.stack = error.stack;
-        }
+    // Add stack trace in development
+    if (isDevelopment && error.stack) {
+        errorResponse.stack = error.stack;
     }
 
     res.status(statusCode).json(errorResponse);

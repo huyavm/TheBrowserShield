@@ -1,22 +1,26 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const http = require('http');
+const https = require('https');
 const profileRoutes = require('./routes/profiles');
 const proxyRoutes = require('./routes/proxy');
 const modeRoutes = require('./routes/mode');
 const errorHandler = require('./middleware/errorHandler');
 const logger = require('./utils/logger');
 const { authenticateToken, rateLimiter } = require('./middleware/auth');
-const { 
-    performanceMonitor, 
-    systemHealthMonitor, 
+const {
+    performanceMonitor,
+    systemHealthMonitor,
     createRateLimiter,
-    requestTracker 
+    requestTracker
 } = require('./middleware/performance');
 const ModeSwitcher = require('./config/mode-switcher');
+const { getSSLOptions, isHTTPSEnabled, getHTTPSPort } = require('./config/ssl');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const HTTPS_PORT = getHTTPSPort();
 
 // Initialize mode switcher
 const modeSwitcher = new ModeSwitcher();
@@ -52,6 +56,10 @@ app.use('/api/profiles', profileRoutes);
 app.use('/api/proxy', proxyRoutes);
 app.use('/api/mode', modeRoutes);
 
+// Swagger API Documentation
+const { setupSwagger } = require('./config/swagger');
+setupSwagger(app);
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     const currentMode = modeSwitcher.getCurrentModeInfo();
@@ -60,7 +68,8 @@ app.get('/health', (req, res) => {
         service: 'BrowserShield Anti-Detect Browser Manager',
         mode: currentMode.name,
         timestamp: new Date().toISOString(),
-        version: '2.0.0'
+        version: '2.0.0',
+        https: isHTTPSEnabled()
     });
 });
 
@@ -70,7 +79,7 @@ app.get('/api/system/health', (req, res) => {
         const memory = process.memoryUsage();
         const uptime = process.uptime();
         const currentMode = modeSwitcher.getCurrentModeInfo();
-        
+
         const systemHealth = {
             timestamp: new Date().toISOString(),
             uptime: Math.floor(uptime),
@@ -85,7 +94,7 @@ app.get('/api/system/health', (req, res) => {
             platform: process.platform,
             arch: process.arch
         };
-        
+
         res.json({
             success: true,
             data: {
@@ -93,7 +102,8 @@ app.get('/api/system/health', (req, res) => {
                 mode: currentMode,
                 service: 'BrowserShield Anti-Detect Browser Manager',
                 version: '2.0.0',
-                status: 'healthy'
+                status: 'healthy',
+                https: isHTTPSEnabled()
             }
         });
     } catch (error) {
@@ -109,8 +119,8 @@ app.get('/api/system/health', (req, res) => {
 // Serve documentation files
 app.get('/docs/:file', (req, res) => {
     const file = req.params.file;
-    const allowedFiles = ['INSTALL.md', 'HUONG_DAN_UPDATE.md', 'UPDATE_GUIDE.md', 'DEPLOYMENT.md', 'README.md'];
-    
+    const allowedFiles = ['INSTALL.md', 'CHANGELOG.md', 'README.md'];
+
     if (allowedFiles.includes(file)) {
         res.sendFile(path.join(__dirname, file));
     } else {
@@ -141,25 +151,39 @@ app.get('/', (req, res) => {
 // Global error handler
 app.use(errorHandler);
 
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
-    const currentMode = modeSwitcher.getCurrentModeInfo();
-    console.log('🛡️ BrowserShield Anti-Detect Browser Manager running on port', PORT);
+// Start HTTP server
+const httpServer = http.createServer(app);
+httpServer.listen(PORT, '0.0.0.0', () => {
+    const modeInfo = modeSwitcher.getCurrentModeInfo();
+    const modeName = modeInfo.info?.name || modeInfo.currentMode || 'mock';
+    console.log('🛡️ BrowserShield Anti-Detect Browser Manager');
     console.log('📱 Environment:', process.env.NODE_ENV || 'development');
-    console.log('🌐 Access: http://localhost:' + PORT);
-    console.log('🎭 Mode:', currentMode.name || currentMode.mode || 'mock');
-    
-    logger.info('BrowserShield server started', {
+    console.log('🌐 HTTP:  http://localhost:' + PORT);
+    console.log('🎭 Mode:', modeName);
+
+    logger.info('BrowserShield HTTP server started', {
         port: PORT,
-        mode: currentMode.name,
+        mode: modeName,
         version: '2.0.0'
     });
 });
 
+// Start HTTPS server if enabled
+const sslOptions = getSSLOptions();
+if (sslOptions) {
+    const httpsServer = https.createServer(sslOptions, app);
+    httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
+        console.log('🔒 HTTPS: https://localhost:' + HTTPS_PORT);
+        logger.info('BrowserShield HTTPS server started', {
+            port: HTTPS_PORT
+        });
+    });
+}
+
 // Graceful shutdown
 process.on('SIGINT', async () => {
     console.log('\n🔄 Shutting down BrowserShield server...');
-    
+
     try {
         // Get the appropriate browser service and stop all browsers
         const BrowserServiceClass = modeSwitcher.getBrowserServiceClass();
@@ -171,7 +195,7 @@ process.on('SIGINT', async () => {
     } catch (error) {
         console.error('❌ Error during shutdown:', error.message);
     }
-    
+
     console.log('👋 BrowserShield server stopped');
     process.exit(0);
 });
