@@ -186,7 +186,7 @@ if exist "runtime\\nodejs\\node.exe" (
 REM Check system Node.js
 where node >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
-    for /f "tokens=*" %%%%i in ('node --version') do echo         [OK] Node.js %%%%i
+    for /f "tokens=*" %%i in ('node --version') do echo         [OK] Node.js %%i
     goto :check_node_version
 )
 
@@ -263,8 +263,8 @@ goto :exit_app
 REM ========================================
 REM Validate Node.js version >= 18.0.0
 REM ========================================
-for /f "tokens=1,2,3 delims=v." %%%%a in ('node --version') do (
-    set NODE_MAJOR=%%%%a
+for /f "tokens=1,2,3 delims=v." %%a in ('node --version') do (
+    set NODE_MAJOR=%%a
 )
 if !NODE_MAJOR! LSS 18 (
     echo.
@@ -400,7 +400,7 @@ if exist "runtime\\nodejs\\node.exe" (
 )
 
 echo.
-for /f "tokens=*" %%%%i in ('node --version') do echo [INFO] Phien ban Node.js: %%%%i
+for /f "tokens=*" %%i in ('node --version') do echo [INFO] Phien ban Node.js: %%i
 echo.
 
 echo [1/4] Xoa npm cache...
