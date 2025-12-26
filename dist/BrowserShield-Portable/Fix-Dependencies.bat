@@ -27,7 +27,7 @@ if exist "runtime\nodejs\node.exe" (
 )
 
 echo.
-for /f "tokens=*" %%%%i in ('node --version') do echo [INFO] Phien ban Node.js: %%%%i
+for /f "tokens=*" %%i in ('node --version') do echo [INFO] Phien ban Node.js: %%i
 echo.
 
 echo [1/4] Xoa npm cache...
