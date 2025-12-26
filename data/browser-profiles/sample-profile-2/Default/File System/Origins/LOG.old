@@ -1,5 +1,0 @@
-2025/12/26-13:56:10.623 1640 Log #3: 3 ops saved to Table #4 OK
-2025/12/26-13:56:10.624 1640 Archiving C:\laragon\www\TheBrowserShield\data\browser-profiles\sample-profile-2\Default\File System\Origins/000003.log: OK
-2025/12/26-13:56:10.624 1640 Table #4: 3 entries OK
-2025/12/26-13:56:10.626 1640 Archiving C:\laragon\www\TheBrowserShield\data\browser-profiles\sample-profile-2\Default\File System\Origins/MANIFEST-000001: OK
-2025/12/26-13:56:10.641 1640 **** Repaired leveldb C:\laragon\www\TheBrowserShield\data\browser-profiles\sample-profile-2\Default\File System\Origins; recovered 1 files; 182 bytes. Some data may have been lost. ****
