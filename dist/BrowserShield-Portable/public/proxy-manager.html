@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrowserShield - Proxy Pool Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+        }
+        body { background-color: #f8f9fa; }
+        .navbar { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); }
+        .card { border: none; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .stats-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .stats-number { font-size: 2rem; font-weight: bold; }
+        .proxy-row { transition: background-color 0.2s; }
+        .proxy-row:hover { background-color: #f1f3f5; }
+        .status-active { color: var(--success-color); }
+        .status-inactive { color: var(--danger-color); }
+        .proxy-type { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; }
+        .type-http { background: #e3f2fd; color: #1976d2; }
+        .type-https { background: #e8f5e9; color: #388e3c; }
+        .type-socks4 { background: #fff3e0; color: #f57c00; }
+        .type-socks5 { background: #fce4ec; color: #c2185b; }
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1050; }
+        .btn-action { padding: 4px 8px; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-shield-lock me-2"></i>BrowserShield
+            </a>
+            <div class="d-flex">
+                <a href="/" class="btn btn-outline-light btn-sm me-2">
+                    <i class="bi bi-house"></i> Home
+                </a>
+                <a href="/admin.html" class="btn btn-outline-light btn-sm me-2">
+                    <i class="bi bi-speedometer2"></i> Admin
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <div class="stats-number" id="totalProxies">0</div>
+                        <div>Total Proxies</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <div class="stats-number" id="activeProxies">0</div>
+                        <div>Active</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <div class="stats-number" id="totalUsage">0</div>
+                        <div>Total Usage</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <div class="stats-number" id="countriesCount">0</div>
+                        <div>Countries</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Add Proxy Form -->
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Thêm Proxy Mới</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="addProxyForm">
+                            <div class="mb-3">
+                                <label class="form-label">Host <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="proxyHost" placeholder="192.168.1.1" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Port <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="proxyPort" placeholder="8080" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Type</label>
+                                <select class="form-select" id="proxyType">
+                                    <option value="http">HTTP</option>
+                                    <option value="https">HTTPS</option>
+                                    <option value="socks4">SOCKS4</option>
+                                    <option value="socks5">SOCKS5</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Username (tùy chọn)</label>
+                                <input type="text" class="form-control" id="proxyUsername" placeholder="username">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Password (tùy chọn)</label>
+                                <input type="password" class="form-control" id="proxyPassword" placeholder="password">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Country</label>
+                                <input type="text" class="form-control" id="proxyCountry" placeholder="VN, US, UK...">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Provider</label>
+                                <input type="text" class="form-control" id="proxyProvider" placeholder="Tên nhà cung cấp">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus"></i> Thêm Proxy
+                            </button>
+                        </form>
+
+                        <hr>
+                        <h6><i class="bi bi-upload me-2"></i>Import Bulk</h6>
+                        <textarea class="form-control mb-2" id="bulkProxies" rows="4" 
+                            placeholder="host:port:user:pass&#10;host:port&#10;..."></textarea>
+                        <button class="btn btn-outline-primary w-100" onclick="importBulkProxies()">
+                            <i class="bi bi-cloud-upload"></i> Import
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Proxy List -->
+            <div class="col-md-8 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-list-ul me-2"></i>Proxy Pool</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="loadProxies()">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteAllProxies()">
+                                <i class="bi bi-trash"></i> Xóa tất cả
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Host:Port</th>
+                                        <th>Type</th>
+                                        <th>Country</th>
+                                        <th>Usage</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="proxyTableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center">
+                                            <div class="spinner-border spinner-border-sm"></div> Loading...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/proxy';
+
+        // Load proxies on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProxies();
+            loadStats();
+        });
+
+        // Load all proxies
+        async function loadProxies() {
+            try {
+                const res = await fetch(API_BASE);
+                const data = await res.json();
+                
+                if (data.success) {
+                    renderProxyTable(data.data);
+                }
+            } catch (error) {
+                showToast('Lỗi tải danh sách proxy', 'danger');
+            }
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API_BASE}/stats`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    document.getElementById('totalProxies').textContent = data.data.total || 0;
+                    document.getElementById('activeProxies').textContent = data.data.active || 0;
+                    document.getElementById('totalUsage').textContent = data.data.totalUsage || 0;
+                    document.getElementById('countriesCount').textContent = 
+                        Object.keys(data.data.byCountry || {}).length;
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Render proxy table
+        function renderProxyTable(proxies) {
+            const tbody = document.getElementById('proxyTableBody');
+            
+            if (!proxies || proxies.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            <i class="bi bi-inbox"></i> Chưa có proxy nào trong pool
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = proxies.map(proxy => `
+                <tr class="proxy-row">
+                    <td>
+                        <i class="bi bi-circle-fill ${proxy.active ? 'status-active' : 'status-inactive'}"></i>
+                    </td>
+                    <td>
+                        <strong>${proxy.host}</strong>:${proxy.port}
+                        ${proxy.username ? '<i class="bi bi-key-fill text-warning ms-1" title="Auth required"></i>' : ''}
+                    </td>
+                    <td>
+                        <span class="proxy-type type-${proxy.type}">${proxy.type.toUpperCase()}</span>
+                    </td>
+                    <td>${proxy.country || '-'}</td>
+                    <td>${proxy.usageCount || 0}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary btn-action" onclick="testProxy('${proxy.id}')" title="Test">
+                            <i class="bi bi-speedometer"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-${proxy.active ? 'warning' : 'success'} btn-action" 
+                            onclick="toggleProxy('${proxy.id}')" title="${proxy.active ? 'Disable' : 'Enable'}">
+                            <i class="bi bi-${proxy.active ? 'pause' : 'play'}"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger btn-action" onclick="deleteProxy('${proxy.id}')" title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Add proxy form submit
+        document.getElementById('addProxyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const proxyData = {
+                host: document.getElementById('proxyHost').value,
+                port: parseInt(document.getElementById('proxyPort').value),
+                type: document.getElementById('proxyType').value,
+                username: document.getElementById('proxyUsername').value || undefined,
+                password: document.getElementById('proxyPassword').value || undefined,
+                country: document.getElementById('proxyCountry').value || undefined,
+                provider: document.getElementById('proxyProvider').value || undefined
+            };
+
+            try {
+                const res = await fetch(API_BASE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(proxyData)
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('Proxy đã được thêm!', 'success');
+                    document.getElementById('addProxyForm').reset();
+                    loadProxies();
+                    loadStats();
+                } else {
+                    showToast(data.message || 'Lỗi thêm proxy', 'danger');
+                }
+            } catch (error) {
+                showToast('Lỗi kết nối server', 'danger');
+            }
+        });
+
+        // Test proxy
+        async function testProxy(id) {
+            showToast('Đang test proxy...', 'info');
+            try {
+                const res = await fetch(`${API_BASE}/${id}/test`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.success && data.data.success) {
+                    showToast(`Proxy OK! Response time: ${data.data.responseTime}ms`, 'success');
+                } else {
+                    showToast(`Proxy failed: ${data.data?.error || 'Unknown error'}`, 'danger');
+                }
+            } catch (error) {
+                showToast('Lỗi test proxy', 'danger');
+            }
+        }
+
+        // Toggle proxy status
+        async function toggleProxy(id) {
+            try {
+                const res = await fetch(`${API_BASE}/${id}/toggle`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    loadProxies();
+                    loadStats();
+                }
+            } catch (error) {
+                showToast('Lỗi cập nhật proxy', 'danger');
+            }
+        }
+
+        // Delete proxy
+        async function deleteProxy(id) {
+            if (!confirm('Xác nhận xóa proxy này?')) return;
+            
+            try {
+                const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showToast('Đã xóa proxy', 'success');
+                    loadProxies();
+                    loadStats();
+                }
+            } catch (error) {
+                showToast('Lỗi xóa proxy', 'danger');
+            }
+        }
+
+        // Delete all proxies
+        async function deleteAllProxies() {
+            if (!confirm('Xác nhận xóa TẤT CẢ proxy?')) return;
+            
+            try {
+                const res = await fetch(API_BASE);
+                const data = await res.json();
+                
+                if (data.success) {
+                    for (const proxy of data.data) {
+                        await fetch(`${API_BASE}/${proxy.id}`, { method: 'DELETE' });
+                    }
+                    showToast('Đã xóa tất cả proxy', 'success');
+                    loadProxies();
+                    loadStats();
+                }
+            } catch (error) {
+                showToast('Lỗi xóa proxy', 'danger');
+            }
+        }
+
+        // Import bulk proxies
+        async function importBulkProxies() {
+            const text = document.getElementById('bulkProxies').value.trim();
+            if (!text) {
+                showToast('Vui lòng nhập danh sách proxy', 'warning');
+                return;
+            }
+
+            const lines = text.split('\n').filter(l => l.trim());
+            let success = 0, failed = 0;
+
+            for (const line of lines) {
+                const parts = line.trim().split(':');
+                if (parts.length < 2) continue;
+
+                const proxyData = {
+                    host: parts[0],
+                    port: parseInt(parts[1]),
+                    type: 'http',
+                    username: parts[2] || undefined,
+                    password: parts[3] || undefined
+                };
+
+                try {
+                    const res = await fetch(API_BASE, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(proxyData)
+                    });
+                    const data = await res.json();
+                    if (data.success) success++;
+                    else failed++;
+                } catch {
+                    failed++;
+                }
+            }
+
+            showToast(`Import: ${success} thành công, ${failed} thất bại`, success > 0 ? 'success' : 'warning');
+            document.getElementById('bulkProxies').value = '';
+            loadProxies();
+            loadStats();
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const id = 'toast-' + Date.now();
+            
+            const bgClass = {
+                success: 'bg-success',
+                danger: 'bg-danger',
+                warning: 'bg-warning',
+                info: 'bg-info'
+            }[type] || 'bg-info';
+
+            container.innerHTML += `
+                <div id="${id}" class="toast ${bgClass} text-white" role="alert">
+                    <div class="toast-body d-flex justify-content-between align-items-center">
+                        ${message}
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+
+            const toast = new bootstrap.Toast(document.getElementById(id));
+            toast.show();
+            
+            setTimeout(() => document.getElementById(id)?.remove(), 5000);
+        }
+    </script>
+</body>
+</html>

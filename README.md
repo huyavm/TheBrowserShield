@@ -36,7 +36,43 @@ A professional Node.js application for managing anti-detect browser profiles wit
 
 ## 🚀 Quick Installation
 
-### Oracle Linux 9 / RHEL (Recommended)
+### 📦 Windows Portable (Khuyến nghị cho người dùng mới)
+
+**Cách nhanh nhất để bắt đầu - không cần cài đặt phức tạp!**
+
+1. **Tải file ZIP**: `BrowserShield-Portable-v1.3.0.zip`
+
+2. **Giải nén** vào thư mục bất kỳ (VD: `D:\BrowserShield`)
+
+3. **Cài Node.js** (nếu chưa có): https://nodejs.org → Chọn bản LTS
+
+4. **Khởi chạy**: Double-click `Start-BrowserShield.bat`
+
+5. **Truy cập**: http://localhost:5000
+
+```
+📁 Cấu trúc thư mục:
+BrowserShield-Portable/
+├── Start-BrowserShield.bat    # 🚀 Click để chạy
+├── Download-Browsers.bat      # Thiết lập browser
+├── browsers/                  # Chrome/Firefox
+├── data/                      # Profiles & database
+└── ...
+```
+
+**Khắc phục nhanh:**
+```cmd
+# Nếu thiếu dependencies
+cd BrowserShield-Portable
+npm install --production
+
+# Nếu port 5000 bị chiếm
+set PORT=3000 && node server.js
+```
+
+---
+
+### Oracle Linux 9 / RHEL (Server)
 
 **One-line installer:**
 ```bash
@@ -347,10 +383,12 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🏷️ Version
 
-**Current Version**: 1.0.0
+**Current Version**: 1.3.0
 - ✅ Complete anti-detect browser management
 - ✅ Web UI with real-time monitoring
 - ✅ Proxy pool management
 - ✅ Activity logging system
 - ✅ Production-ready deployment scripts
 - ✅ Oracle Linux 9 optimization
+- ✅ **Windows Portable Edition** - Chạy trực tiếp từ ZIP
+- ✅ Visible Browser Mode - Xem browser hoạt động real-time

@@ -1,3 +1,5 @@
-2025/12/25-00:25:27.338 7389 Reusing MANIFEST /home/joyce/TheBrowserShield/data/browser-profiles/f2eb632e-8185-49f7-8fde-eda47d6c6d32/Default/File System/Origins/MANIFEST-000001
-2025/12/25-00:25:27.339 7389 Recovering log #3
-2025/12/25-00:25:27.339 7389 Reusing old log /home/joyce/TheBrowserShield/data/browser-profiles/f2eb632e-8185-49f7-8fde-eda47d6c6d32/Default/File System/Origins/000003.log 
+2025/12/25-10:36:00.053 47c Log #3: 3 ops saved to Table #4 OK
+2025/12/25-10:36:00.055 47c Archiving C:\laragon\www\TheBrowserShield\data\browser-profiles\f2eb632e-8185-49f7-8fde-eda47d6c6d32\Default\File System\Origins/000003.log: OK
+2025/12/25-10:36:00.055 47c Table #4: 3 entries OK
+2025/12/25-10:36:00.056 47c Archiving C:\laragon\www\TheBrowserShield\data\browser-profiles\f2eb632e-8185-49f7-8fde-eda47d6c6d32\Default\File System\Origins/MANIFEST-000001: OK
+2025/12/25-10:36:00.063 47c **** Repaired leveldb C:\laragon\www\TheBrowserShield\data\browser-profiles\f2eb632e-8185-49f7-8fde-eda47d6c6d32\Default\File System\Origins; recovered 1 files; 182 bytes. Some data may have been lost. ****

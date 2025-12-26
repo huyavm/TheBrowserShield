@@ -1,3 +1,5 @@
-2025/12/25-00:33:07.077 8291 Reusing MANIFEST /home/joyce/TheBrowserShield/data/browser-profiles/f2eb632e-8185-49f7-8fde-eda47d6c6d32/Default/Session Storage/MANIFEST-000001
-2025/12/25-00:33:07.078 8291 Recovering log #3
-2025/12/25-00:33:07.080 8291 Reusing old log /home/joyce/TheBrowserShield/data/browser-profiles/f2eb632e-8185-49f7-8fde-eda47d6c6d32/Default/Session Storage/000003.log 
+2025/12/25-10:35:57.805 3bf8 Creating DB C:\laragon\www\TheBrowserShield\data\browser-profiles\f2eb632e-8185-49f7-8fde-eda47d6c6d32\Default\Session Storage since it was missing.
+2025/12/25-10:35:57.844 3bf8 Reusing MANIFEST C:\laragon\www\TheBrowserShield\data\browser-profiles\f2eb632e-8185-49f7-8fde-eda47d6c6d32\Default\Session Storage/MANIFEST-000001
+2025/12/25-10:36:45.083 3b4c Level-0 table #5: started
+2025/12/25-10:36:45.100 3b4c Level-0 table #5: 44840 bytes OK
+2025/12/25-10:36:45.105 3b4c Delete type=0 #3

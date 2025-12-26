@@ -1,5 +1,97 @@
 # 🚀 BrowserShield - Hướng Dẫn Cài Đặt & Cập Nhật
 
+## 📦 Phiên Bản Portable (Windows) - KHUYẾN NGHỊ CHO NGƯỜI DÙNG MỚI
+
+### Bước 1: Tải và giải nén
+```
+1. Tải file BrowserShield-Portable-v1.3.0.zip
+2. Click chuột phải → "Extract All..." hoặc dùng 7-Zip/WinRAR
+3. Giải nén vào thư mục bất kỳ (VD: D:\BrowserShield)
+   ⚠️ Tránh đường dẫn có dấu tiếng Việt hoặc ký tự đặc biệt
+```
+
+### Bước 2: Kiểm tra Node.js
+Mở Command Prompt (cmd) và chạy:
+```cmd
+node --version
+```
+- ✅ Nếu hiện `v18.x.x` trở lên → Sẵn sàng
+- ❌ Nếu báo lỗi → Cài Node.js từ https://nodejs.org (chọn bản LTS)
+
+### Bước 3: Khởi chạy
+```
+1. Mở thư mục BrowserShield-Portable
+2. Double-click "Start-BrowserShield.bat"
+3. Đợi đến khi thấy "Server running on port 5000"
+4. Mở trình duyệt: http://localhost:5000
+```
+
+### Bước 4: Thiết lập Browser (Tùy chọn)
+```
+Double-click "Download-Browsers.bat" để tự động phát hiện Chrome/Firefox
+```
+
+### Cấu trúc thư mục Portable
+```
+BrowserShield-Portable/
+├── Start-BrowserShield.bat    # 🚀 Launcher chính
+├── Start-BrowserShield.ps1    # PowerShell launcher
+├── Download-Browsers.bat      # Thiết lập browser
+├── portable-config.json       # Cấu hình portable
+├── browsers/                  # Browser binaries
+├── data/                      # Dữ liệu (profiles, logs, database)
+├── config/                    # Cấu hình ứng dụng
+├── public/                    # Giao diện web
+└── node_modules/              # Dependencies (tự động tạo)
+```
+
+### Các trang web chính
+| URL | Chức năng |
+|-----|-----------|
+| http://localhost:5000 | Dashboard chính |
+| http://localhost:5000/admin.html | Quản trị profiles |
+| http://localhost:5000/proxy-manager.html | **Quản lý Proxy Pool** |
+| http://localhost:5000/browser-control.html | Điều khiển browser |
+| http://localhost:5000/mode-manager.html | Quản lý chế độ |
+
+### Khắc phục sự cố Portable
+
+**Lỗi "Node.js not found":**
+```
+→ Cài Node.js từ https://nodejs.org
+→ Khởi động lại máy tính
+→ Chạy lại Start-BrowserShield.bat
+```
+
+**Lỗi "Port 5000 already in use":**
+```cmd
+# Đổi port khác
+set PORT=3000 && node server.js
+```
+
+**Lỗi "Cannot find module...":**
+```cmd
+cd BrowserShield-Portable
+npm install --production
+```
+
+**Lỗi PowerShell Execution Policy:**
+```powershell
+# Mở PowerShell với quyền Admin
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+### Di chuyển/Backup Portable
+```
+Backup các thư mục/file sau:
+- data/browser-profiles/    # Profiles đã tạo
+- data/browsershield.db     # Database
+- data/profiles.json        # Cấu hình profiles
+- portable-config.json      # Cấu hình portable
+```
+
+---
+
 ## Cài Đặt Mới (Oracle Linux 9)
 
 ### Cách 1: Cài đặt tự động (Khuyến nghị)

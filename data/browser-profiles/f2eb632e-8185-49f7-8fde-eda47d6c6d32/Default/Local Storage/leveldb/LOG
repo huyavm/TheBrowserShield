@@ -1,3 +1,2 @@
-2025/12/25-00:33:07.046 828e Reusing MANIFEST /home/joyce/TheBrowserShield/data/browser-profiles/f2eb632e-8185-49f7-8fde-eda47d6c6d32/Default/Local Storage/leveldb/MANIFEST-000001
-2025/12/25-00:33:07.067 828e Recovering log #3
-2025/12/25-00:33:07.069 828e Reusing old log /home/joyce/TheBrowserShield/data/browser-profiles/f2eb632e-8185-49f7-8fde-eda47d6c6d32/Default/Local Storage/leveldb/000003.log 
+2025/12/25-10:35:57.754 3b4c Creating DB C:\laragon\www\TheBrowserShield\data\browser-profiles\f2eb632e-8185-49f7-8fde-eda47d6c6d32\Default\Local Storage\leveldb since it was missing.
+2025/12/25-10:35:57.826 3b4c Reusing MANIFEST C:\laragon\www\TheBrowserShield\data\browser-profiles\f2eb632e-8185-49f7-8fde-eda47d6c6d32\Default\Local Storage\leveldb/MANIFEST-000001

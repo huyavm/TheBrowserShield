@@ -1,0 +1,11 @@
+{
+  "portable": true,
+  "browsersPath": "./browsers",
+  "dataPath": "./data",
+  "chrome": {
+    "executablePath": "./browsers/chrome/chrome.exe"
+  },
+  "firefox": {
+    "executablePath": "./browsers/firefox/firefox.exe"
+  }
+}
