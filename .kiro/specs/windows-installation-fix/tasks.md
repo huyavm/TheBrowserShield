@@ -124,7 +124,7 @@ Kế hoạch triển khai để khắc phục các vấn đề cài đặt Brows
     - Add validation step after build
     - _Requirements: 6.2, 6.3_
 
-- [-] 12. Final checkpoint - Full integration test
+- [x] 12. Final checkpoint - Full integration test
   - Ensure all tests pass, ask the user if questions arise.
   - Test portable package creation
   - Test first-run experience simulation
