@@ -472,3 +472,319 @@
     }
   }
 }
+
+================================================================================
+{
+  "timestamp": "2025-12-26T01:29:25.427Z",
+  "type": "WARNING",
+  "message": "Browser detection completed",
+  "details": {
+    "browsers": {
+      "chrome": {
+        "available": true,
+        "path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "message": "Chrome found at: C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+      },
+      "firefox": {
+        "available": false,
+        "path": null,
+        "message": "Firefox not found. Install Firefox to use Firefox mode."
+      },
+      "edge": {
+        "available": true,
+        "path": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "message": "Edge found at: C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+      },
+      "puppeteerChrome": {
+        "available": true,
+        "path": "C:\\Users\\Zero\\.cache\\puppeteer\\chrome\\win64-137.0.7151.119\\chrome-win64\\chrome.exe",
+        "message": "Puppeteer Chromium available at: C:\\Users\\Zero\\.cache\\puppeteer\\chrome\\win64-137.0.7151.119\\chrome-win64\\chrome.exe"
+      }
+    },
+    "recommendation": "Chrome is available. Production mode recommended."
+  }
+}
+
+================================================================================
+{
+  "timestamp": "2025-12-26T01:29:25.475Z",
+  "type": "SUCCESS",
+  "message": "BrowserShield started successfully",
+  "info": {
+    "port": 5000,
+    "mode": "Mock Mode",
+    "https": false
+  },
+  "diagnostics": {
+    "timestamp": "2025-12-26T01:29:25.473Z",
+    "system": {
+      "platform": "win32",
+      "arch": "x64",
+      "release": "10.0.19045",
+      "type": "Windows_NT",
+      "hostname": "COMPUTER",
+      "cpus": 4,
+      "totalMemory": "12163 MB",
+      "freeMemory": "4445 MB"
+    },
+    "node": {
+      "version": "v24.11.0",
+      "execPath": "C:\\Program Files\\nodejs\\node.exe",
+      "pid": 20228,
+      "cwd": "C:\\laragon\\www\\TheBrowserShield"
+    },
+    "environment": {
+      "NODE_ENV": "test",
+      "PORT": "5000",
+      "LOG_LEVEL": "info"
+    },
+    "paths": {
+      "appRoot": "C:\\laragon\\www\\TheBrowserShield",
+      "dataDir": "C:\\laragon\\www\\TheBrowserShield\\data",
+      "logsDir": "C:\\laragon\\www\\TheBrowserShield\\data\\logs"
+    },
+    "windows": {
+      "LOCALAPPDATA": "C:\\Users\\Zero\\AppData\\Local",
+      "APPDATA": "C:\\Users\\Zero\\AppData\\Roaming",
+      "PROGRAMFILES": "C:\\Program Files",
+      "PROGRAMFILES(X86)": "C:\\Program Files (x86)"
+    }
+  }
+}
+
+================================================================================
+{
+  "timestamp": "2025-12-26T01:30:16.058Z",
+  "type": "WARNING",
+  "message": "Browser detection completed",
+  "details": {
+    "browsers": {
+      "chrome": {
+        "available": true,
+        "path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "message": "Chrome found at: C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+      },
+      "firefox": {
+        "available": false,
+        "path": null,
+        "message": "Firefox not found. Install Firefox to use Firefox mode."
+      },
+      "edge": {
+        "available": true,
+        "path": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "message": "Edge found at: C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+      },
+      "puppeteerChrome": {
+        "available": true,
+        "path": "C:\\Users\\Zero\\.cache\\puppeteer\\chrome\\win64-137.0.7151.119\\chrome-win64\\chrome.exe",
+        "message": "Puppeteer Chromium available at: C:\\Users\\Zero\\.cache\\puppeteer\\chrome\\win64-137.0.7151.119\\chrome-win64\\chrome.exe"
+      }
+    },
+    "recommendation": "Chrome is available. Production mode recommended."
+  }
+}
+
+================================================================================
+{
+  "timestamp": "2025-12-26T01:30:16.344Z",
+  "type": "SUCCESS",
+  "message": "BrowserShield started successfully",
+  "info": {
+    "port": 5000,
+    "mode": "Mock Mode",
+    "https": false
+  },
+  "diagnostics": {
+    "timestamp": "2025-12-26T01:30:16.343Z",
+    "system": {
+      "platform": "win32",
+      "arch": "x64",
+      "release": "10.0.19045",
+      "type": "Windows_NT",
+      "hostname": "COMPUTER",
+      "cpus": 4,
+      "totalMemory": "12163 MB",
+      "freeMemory": "3383 MB"
+    },
+    "node": {
+      "version": "v24.11.0",
+      "execPath": "C:\\Program Files\\nodejs\\node.exe",
+      "pid": 12764,
+      "cwd": "C:\\laragon\\www\\TheBrowserShield"
+    },
+    "environment": {
+      "NODE_ENV": "test",
+      "PORT": "5000",
+      "LOG_LEVEL": "info"
+    },
+    "paths": {
+      "appRoot": "C:\\laragon\\www\\TheBrowserShield",
+      "dataDir": "C:\\laragon\\www\\TheBrowserShield\\data",
+      "logsDir": "C:\\laragon\\www\\TheBrowserShield\\data\\logs"
+    },
+    "windows": {
+      "LOCALAPPDATA": "C:\\Users\\Zero\\AppData\\Local",
+      "APPDATA": "C:\\Users\\Zero\\AppData\\Roaming",
+      "PROGRAMFILES": "C:\\Program Files",
+      "PROGRAMFILES(X86)": "C:\\Program Files (x86)"
+    }
+  }
+}
+
+================================================================================
+{
+  "timestamp": "2025-12-26T01:35:49.017Z",
+  "type": "WARNING",
+  "message": "Browser detection completed",
+  "details": {
+    "browsers": {
+      "chrome": {
+        "available": true,
+        "path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "message": "Chrome found at: C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+      },
+      "firefox": {
+        "available": false,
+        "path": null,
+        "message": "Firefox not found. Install Firefox to use Firefox mode."
+      },
+      "edge": {
+        "available": true,
+        "path": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "message": "Edge found at: C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+      },
+      "puppeteerChrome": {
+        "available": true,
+        "path": "C:\\Users\\Zero\\.cache\\puppeteer\\chrome\\win64-137.0.7151.119\\chrome-win64\\chrome.exe",
+        "message": "Puppeteer Chromium available at: C:\\Users\\Zero\\.cache\\puppeteer\\chrome\\win64-137.0.7151.119\\chrome-win64\\chrome.exe"
+      }
+    },
+    "recommendation": "Chrome is available. Production mode recommended."
+  }
+}
+
+================================================================================
+{
+  "timestamp": "2025-12-26T01:35:49.588Z",
+  "type": "SUCCESS",
+  "message": "BrowserShield started successfully",
+  "info": {
+    "port": 5000,
+    "mode": "Mock Mode",
+    "https": false
+  },
+  "diagnostics": {
+    "timestamp": "2025-12-26T01:35:49.587Z",
+    "system": {
+      "platform": "win32",
+      "arch": "x64",
+      "release": "10.0.19045",
+      "type": "Windows_NT",
+      "hostname": "COMPUTER",
+      "cpus": 4,
+      "totalMemory": "12163 MB",
+      "freeMemory": "3601 MB"
+    },
+    "node": {
+      "version": "v24.11.0",
+      "execPath": "C:\\Program Files\\nodejs\\node.exe",
+      "pid": 8444,
+      "cwd": "C:\\laragon\\www\\TheBrowserShield"
+    },
+    "environment": {
+      "NODE_ENV": "test",
+      "PORT": "5000",
+      "LOG_LEVEL": "info"
+    },
+    "paths": {
+      "appRoot": "C:\\laragon\\www\\TheBrowserShield",
+      "dataDir": "C:\\laragon\\www\\TheBrowserShield\\data",
+      "logsDir": "C:\\laragon\\www\\TheBrowserShield\\data\\logs"
+    },
+    "windows": {
+      "LOCALAPPDATA": "C:\\Users\\Zero\\AppData\\Local",
+      "APPDATA": "C:\\Users\\Zero\\AppData\\Roaming",
+      "PROGRAMFILES": "C:\\Program Files",
+      "PROGRAMFILES(X86)": "C:\\Program Files (x86)"
+    }
+  }
+}
+
+================================================================================
+{
+  "timestamp": "2025-12-26T01:44:11.595Z",
+  "type": "WARNING",
+  "message": "Browser detection completed",
+  "details": {
+    "browsers": {
+      "chrome": {
+        "available": true,
+        "path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "message": "Chrome found at: C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+      },
+      "firefox": {
+        "available": false,
+        "path": null,
+        "message": "Firefox not found. Install Firefox to use Firefox mode."
+      },
+      "edge": {
+        "available": true,
+        "path": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "message": "Edge found at: C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+      },
+      "puppeteerChrome": {
+        "available": true,
+        "path": "C:\\Users\\Zero\\.cache\\puppeteer\\chrome\\win64-137.0.7151.119\\chrome-win64\\chrome.exe",
+        "message": "Puppeteer Chromium available at: C:\\Users\\Zero\\.cache\\puppeteer\\chrome\\win64-137.0.7151.119\\chrome-win64\\chrome.exe"
+      }
+    },
+    "recommendation": "Chrome is available. Production mode recommended."
+  }
+}
+
+================================================================================
+{
+  "timestamp": "2025-12-26T01:44:12.561Z",
+  "type": "SUCCESS",
+  "message": "BrowserShield started successfully",
+  "info": {
+    "port": 5000,
+    "mode": "Mock Mode",
+    "https": false
+  },
+  "diagnostics": {
+    "timestamp": "2025-12-26T01:44:12.560Z",
+    "system": {
+      "platform": "win32",
+      "arch": "x64",
+      "release": "10.0.19045",
+      "type": "Windows_NT",
+      "hostname": "COMPUTER",
+      "cpus": 4,
+      "totalMemory": "12163 MB",
+      "freeMemory": "4898 MB"
+    },
+    "node": {
+      "version": "v24.11.0",
+      "execPath": "C:\\Program Files\\nodejs\\node.exe",
+      "pid": 2724,
+      "cwd": "C:\\laragon\\www\\TheBrowserShield"
+    },
+    "environment": {
+      "NODE_ENV": "test",
+      "PORT": "5000",
+      "LOG_LEVEL": "info"
+    },
+    "paths": {
+      "appRoot": "C:\\laragon\\www\\TheBrowserShield",
+      "dataDir": "C:\\laragon\\www\\TheBrowserShield\\data",
+      "logsDir": "C:\\laragon\\www\\TheBrowserShield\\data\\logs"
+    },
+    "windows": {
+      "LOCALAPPDATA": "C:\\Users\\Zero\\AppData\\Local",
+      "APPDATA": "C:\\Users\\Zero\\AppData\\Roaming",
+      "PROGRAMFILES": "C:\\Program Files",
+      "PROGRAMFILES(X86)": "C:\\Program Files (x86)"
+    }
+  }
+}

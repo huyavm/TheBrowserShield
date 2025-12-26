@@ -1,5 +1,0 @@
-2025/12/25-10:35:57.449 3330 Log #3: 3 ops saved to Table #4 OK
-2025/12/25-10:35:57.509 3330 Archiving C:\laragon\www\TheBrowserShield\data\browser-profiles\f2eb632e-8185-49f7-8fde-eda47d6c6d32\Default\Site Characteristics Database/000003.log: OK
-2025/12/25-10:35:57.509 3330 Table #4: 3 entries OK
-2025/12/25-10:35:57.632 3330 Archiving C:\laragon\www\TheBrowserShield\data\browser-profiles\f2eb632e-8185-49f7-8fde-eda47d6c6d32\Default\Site Characteristics Database/MANIFEST-000001: OK
-2025/12/25-10:35:57.691 3330 **** Repaired leveldb C:\laragon\www\TheBrowserShield\data\browser-profiles\f2eb632e-8185-49f7-8fde-eda47d6c6d32\Default\Site Characteristics Database; recovered 1 files; 229 bytes. Some data may have been lost. ****
