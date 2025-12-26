@@ -1,4 +1,4 @@
-# BrowserShield Portable Edition v1.3.2
+# BrowserShield Portable Edition v1.4.0
 
 ## Khoi Dong Nhanh
 
@@ -116,5 +116,5 @@ Backup cac thu muc/file sau:
 
 ## Phien Ban
 
-Version: 1.3.2
+Version: 1.4.0
 Build Date: 2025-12-26

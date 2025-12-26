@@ -733,6 +733,9 @@ class BrowserShieldAdmin {
 
         const session = this.sessions.find(s => s.profileId === profileId);
 
+        // Build proxy info section
+        const proxyInfo = this.buildProxyInfoHtml(profile.proxy);
+
         const modalBody = document.getElementById('profileModalBody');
         modalBody.innerHTML = `
             <div class="row">
@@ -750,9 +753,14 @@ class BrowserShieldAdmin {
                     <table class="table table-sm">
                         <tr><td><strong>Timezone:</strong></td><td>${profile.timezone}</td></tr>
                         <tr><td><strong>Viewport:</strong></td><td>${profile.viewport.width}x${profile.viewport.height}</td></tr>
-                        <tr><td><strong>Proxy:</strong></td><td>${profile.proxy ? 'Enabled' : 'Disabled'}</td></tr>
                         <tr><td><strong>Auto Navigate:</strong></td><td>${profile.autoNavigateUrl || 'None'}</td></tr>
                     </table>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6>Proxy Configuration</h6>
+                    ${proxyInfo}
                 </div>
             </div>
             <div class="row mt-3">
@@ -886,6 +894,28 @@ class BrowserShieldAdmin {
         return `${hours}h ${minutes}m`;
     }
 
+    buildProxyInfoHtml(proxy) {
+        if (!proxy || !proxy.host) {
+            return `<div class="text-muted">No proxy configured</div>`;
+        }
+
+        const authStatus = proxy.username ? 
+            '<span class="badge bg-success">Authenticated</span>' : 
+            '<span class="badge bg-secondary">No Auth</span>';
+        
+        const proxyType = (proxy.type || 'http').toUpperCase();
+
+        return `
+            <table class="table table-sm">
+                <tr><td><strong>Host:</strong></td><td>${proxy.host}</td></tr>
+                <tr><td><strong>Port:</strong></td><td>${proxy.port}</td></tr>
+                <tr><td><strong>Type:</strong></td><td><span class="badge bg-info">${proxyType}</span></td></tr>
+                <tr><td><strong>Authentication:</strong></td><td>${authStatus}</td></tr>
+                ${proxy.username ? `<tr><td><strong>Username:</strong></td><td>${proxy.username}</td></tr>` : ''}
+            </table>
+        `;
+    }
+
     truncateText(text, maxLength) {
         if (text.length <= maxLength) return text;
         return text.substring(0, maxLength) + '...';
@@ -897,6 +927,12 @@ class BrowserShieldAdmin {
         if (!profile) {
             this.showToast('Profile not found', 'error');
             return;
+        }
+
+        // Determine current proxy source
+        let proxySource = 'none';
+        if (profile.proxy && profile.proxy.host) {
+            proxySource = 'manual'; // Default to manual if proxy exists
         }
 
         // Create edit profile modal
@@ -951,11 +987,84 @@ class BrowserShieldAdmin {
                                 <label class="form-label">User Agent</label>
                                 <textarea class="form-control" id="editUserAgent" rows="2">${profile.userAgent}</textarea>
                             </div>
-                            <div class="form-check">
+                            <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" id="editSpoofFingerprint" ${profile.spoofFingerprint ? 'checked' : ''}>
                                 <label class="form-check-label" for="editSpoofFingerprint">
                                     Enable Anti-Detection (Stealth Mode)
                                 </label>
+                            </div>
+                            
+                            <!-- Proxy Configuration Section -->
+                            <div class="card mt-3">
+                                <div class="card-header">
+                                    <i class="fas fa-globe"></i> Proxy Configuration
+                                </div>
+                                <div class="card-body">
+                                    <!-- Current Proxy Display -->
+                                    <div id="currentProxyInfo" class="alert alert-info mb-3" style="${profile.proxy && profile.proxy.host ? '' : 'display: none;'}">
+                                        <strong>Current Proxy:</strong> <span id="currentProxyText">${this.formatProxyDisplay(profile.proxy)}</span>
+                                    </div>
+                                    
+                                    <!-- Proxy Source Selection -->
+                                    <div class="mb-3">
+                                        <label class="form-label">Proxy Source</label>
+                                        <select class="form-select" id="editProxySource" onchange="browserShieldAdmin.handleProxySourceChange()">
+                                            <option value="none" ${proxySource === 'none' ? 'selected' : ''}>No Proxy</option>
+                                            <option value="pool">Select from Proxy Pool</option>
+                                            <option value="manual" ${proxySource === 'manual' ? 'selected' : ''}>Enter Manually</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Proxy Pool Dropdown (shown when source = pool) -->
+                                    <div id="proxyPoolSection" style="display: none;">
+                                        <div class="mb-3">
+                                            <label class="form-label">Select Proxy</label>
+                                            <select class="form-select" id="editProxyPool" onchange="browserShieldAdmin.populateProxyFromPool()">
+                                                <option value="">Loading proxies...</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Manual Proxy Input (shown when source = manual or pool selected) -->
+                                    <div id="manualProxySection" style="${proxySource === 'manual' ? '' : 'display: none;'}">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Host *</label>
+                                                <input type="text" class="form-control" id="editProxyHost" placeholder="proxy.example.com" value="${profile.proxy?.host || ''}">
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <label class="form-label">Port *</label>
+                                                <input type="number" class="form-control" id="editProxyPort" placeholder="8080" min="1" max="65535" value="${profile.proxy?.port || ''}">
+                                            </div>
+                                            <div class="col-md-3 mb-3">
+                                                <label class="form-label">Type</label>
+                                                <select class="form-select" id="editProxyType">
+                                                    <option value="http" ${profile.proxy?.type === 'http' ? 'selected' : ''}>HTTP</option>
+                                                    <option value="https" ${profile.proxy?.type === 'https' ? 'selected' : ''}>HTTPS</option>
+                                                    <option value="socks4" ${profile.proxy?.type === 'socks4' ? 'selected' : ''}>SOCKS4</option>
+                                                    <option value="socks5" ${profile.proxy?.type === 'socks5' ? 'selected' : ''}>SOCKS5</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Username (optional)</label>
+                                                <input type="text" class="form-control" id="editProxyUsername" placeholder="username" value="${profile.proxy?.username || ''}">
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Password (optional)</label>
+                                                <input type="password" class="form-control" id="editProxyPassword" placeholder="password" value="${profile.proxy?.password || ''}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Clear Proxy Button -->
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="browserShieldAdmin.clearProxy()">
+                                            <i class="fas fa-times"></i> Clear Proxy
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </form>
                     </div>
@@ -973,12 +1082,288 @@ class BrowserShieldAdmin {
         const bsModal = new bootstrap.Modal(modal);
         bsModal.show();
 
+        // Load proxy pool after modal is shown
+        this.loadProxyPool();
+        
+        // Display current proxy configuration
+        this.displayCurrentProxy(profile.proxy);
+
         modal.addEventListener('hidden.bs.modal', () => {
             document.body.removeChild(modal);
         });
     }
 
+    // Format proxy display string
+    formatProxyDisplay(proxy) {
+        if (!proxy || !proxy.host) {
+            return 'No proxy configured';
+        }
+        let display = `${proxy.host}:${proxy.port} (${proxy.type || 'http'})`;
+        if (proxy.username) {
+            display += ` - Auth: ${proxy.username}:${'*'.repeat(proxy.password?.length || 4)}`;
+        }
+        return display;
+    }
+
+    // Load proxy pool for dropdown
+    /**
+     * Load proxy pool for dropdown
+     * Fetches proxies from API and filters only active ones
+     * Requirements: 2.1, 2.4
+     */
+    async loadProxyPool() {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/proxy`);
+            const data = await response.json();
+            
+            const dropdown = document.getElementById('editProxyPool');
+            if (!dropdown) return [];
+            
+            if (data.success && data.data && data.data.length > 0) {
+                // Filter only active proxies (API returns 'active' field, not 'isActive')
+                const activeProxies = this.filterActiveProxies(data.data);
+                
+                if (activeProxies.length === 0) {
+                    dropdown.innerHTML = '<option value="">No proxies available</option>';
+                    return [];
+                }
+                
+                dropdown.innerHTML = '<option value="">-- Select a proxy --</option>' +
+                    activeProxies.map(proxy => 
+                        `<option value="${proxy.id}" data-proxy='${JSON.stringify(proxy)}'>
+                            ${proxy.host}:${proxy.port} (${proxy.type || 'http'})${proxy.country ? ' - ' + proxy.country : ''}
+                        </option>`
+                    ).join('');
+                
+                return activeProxies;
+            } else {
+                dropdown.innerHTML = '<option value="">No proxies available</option>';
+                return [];
+            }
+        } catch (error) {
+            console.error('Error loading proxy pool:', error);
+            const dropdown = document.getElementById('editProxyPool');
+            if (dropdown) {
+                dropdown.innerHTML = '<option value="">Error loading proxies</option>';
+            }
+            return [];
+        }
+    }
+
+    /**
+     * Filter active proxies from proxy list
+     * Property 2: Active Proxy Filtering - only show proxies where active is true
+     * Validates: Requirements 2.4
+     * @param {Array} proxies - Array of proxy objects
+     * @returns {Array} - Array of active proxies only
+     */
+    filterActiveProxies(proxies) {
+        if (!Array.isArray(proxies)) return [];
+        // API returns 'active' field (boolean), filter only active proxies
+        return proxies.filter(p => p.active === true);
+    }
+
+    /**
+     * Display current proxy configuration for a profile
+     * Requirements: 1.1, 1.2, 1.3
+     * @param {Object} proxy - Proxy configuration object
+     */
+    displayCurrentProxy(proxy) {
+        const infoDiv = document.getElementById('currentProxyInfo');
+        const textSpan = document.getElementById('currentProxyText');
+        
+        if (!infoDiv || !textSpan) return;
+        
+        if (!proxy || !proxy.host) {
+            // No proxy configured - hide the info div
+            infoDiv.style.display = 'none';
+            textSpan.textContent = 'No proxy configured';
+            return;
+        }
+        
+        // Show proxy info with masked password
+        infoDiv.style.display = 'block';
+        textSpan.textContent = this.formatProxyDisplay(proxy);
+    }
+
+    /**
+     * Handle proxy source change
+     * Toggle visibility of proxyPoolSection and manualProxySection
+     * Clear fields when switching source
+     * Requirements: 2.1, 3.1
+     */
+    handleProxySourceChange() {
+        const source = document.getElementById('editProxySource')?.value;
+        const poolSection = document.getElementById('proxyPoolSection');
+        const manualSection = document.getElementById('manualProxySection');
+        
+        if (!poolSection || !manualSection) return;
+        
+        // Clear fields when switching source to ensure clean state
+        this.clearProxyFields();
+        
+        // Hide all sections first
+        poolSection.style.display = 'none';
+        manualSection.style.display = 'none';
+        
+        if (source === 'pool') {
+            poolSection.style.display = 'block';
+            manualSection.style.display = 'block';
+        } else if (source === 'manual') {
+            manualSection.style.display = 'block';
+        }
+        // If 'none', both sections stay hidden and fields are cleared
+    }
+
+    /**
+     * Populate proxy fields from pool selection
+     * Fill all form fields with data from selected proxy
+     * Property 3: Proxy Selection Population - all form fields SHALL be populated
+     * with the corresponding values from the selected proxy
+     * Requirements: 2.2
+     */
+    populateProxyFromPool() {
+        const dropdown = document.getElementById('editProxyPool');
+        if (!dropdown) return;
+        
+        const selectedOption = dropdown.options[dropdown.selectedIndex];
+        if (!selectedOption || !selectedOption.value) return;
+        
+        try {
+            const proxyData = JSON.parse(selectedOption.dataset.proxy);
+            
+            // Populate all form fields with proxy data
+            document.getElementById('editProxyHost').value = proxyData.host || '';
+            document.getElementById('editProxyPort').value = proxyData.port || '';
+            document.getElementById('editProxyType').value = proxyData.type || 'http';
+            document.getElementById('editProxyUsername').value = proxyData.username || '';
+            document.getElementById('editProxyPassword').value = proxyData.password || '';
+        } catch (error) {
+            console.error('Error parsing proxy data:', error);
+        }
+    }
+
+    // Clear proxy configuration
+    clearProxy() {
+        this.clearProxyFields();
+        document.getElementById('editProxySource').value = 'none';
+        document.getElementById('proxyPoolSection').style.display = 'none';
+        document.getElementById('manualProxySection').style.display = 'none';
+        document.getElementById('currentProxyInfo').style.display = 'none';
+        this.showToast('Proxy configuration cleared', 'info');
+    }
+
+    // Clear proxy form fields
+    clearProxyFields() {
+        const fields = ['editProxyHost', 'editProxyPort', 'editProxyUsername', 'editProxyPassword'];
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const typeEl = document.getElementById('editProxyType');
+        if (typeEl) typeEl.value = 'http';
+        const poolEl = document.getElementById('editProxyPool');
+        if (poolEl) poolEl.value = '';
+    }
+
+    /**
+     * Validate proxy configuration
+     * Property 4: Proxy Input Validation
+     * Property 5: Authentication Consistency
+     * 
+     * Validates:
+     * - Host must be a non-empty string (not whitespace-only)
+     * - Port must be an integer between 1 and 65535
+     * - Type must be one of: http, https, socks4, socks5
+     * - If username is provided and non-empty, password must also be provided
+     * - If password is provided and non-empty, username must also be provided
+     * 
+     * Requirements: 3.2, 3.3, 3.5, 3.6
+     * 
+     * @param {Object} proxy - Proxy configuration object
+     * @returns {Object} - { valid: boolean, errors: string[] }
+     */
+    validateProxyConfig(proxy) {
+        const errors = [];
+        const validTypes = ['http', 'https', 'socks4', 'socks5'];
+
+        // If proxy is null or undefined, it's valid (no proxy)
+        if (proxy === null || proxy === undefined) {
+            return { valid: true, errors: [] };
+        }
+
+        // If proxy is not an object, it's invalid
+        if (typeof proxy !== 'object') {
+            return { valid: false, errors: ['Proxy must be an object or null'] };
+        }
+
+        // Validate host - must be non-empty string (not whitespace-only)
+        // Requirements: 3.2
+        if (!proxy.host || typeof proxy.host !== 'string' || proxy.host.trim().length === 0) {
+            errors.push('Proxy host is required');
+        }
+
+        // Validate port - must be integer between 1 and 65535
+        // Requirements: 3.3
+        const port = proxy.port;
+        if (port === undefined || port === null || port === '') {
+            errors.push('Port must be between 1 and 65535');
+        } else {
+            const portNum = typeof port === 'string' ? parseInt(port, 10) : port;
+            if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535) {
+                errors.push('Port must be between 1 and 65535');
+            }
+        }
+
+        // Validate type - must be one of http, https, socks4, socks5
+        // Requirements: 3.4 (implicit from design)
+        if (proxy.type !== undefined && proxy.type !== null && proxy.type !== '') {
+            if (!validTypes.includes(proxy.type)) {
+                errors.push('Type must be one of: http, https, socks4, socks5');
+            }
+        }
+
+        // Validate authentication consistency
+        // Requirements: 3.5, 3.6
+        const hasUsername = proxy.username && typeof proxy.username === 'string' && proxy.username.trim().length > 0;
+        const hasPassword = proxy.password && typeof proxy.password === 'string' && proxy.password.trim().length > 0;
+
+        if (hasUsername && !hasPassword) {
+            errors.push('Password is required when username is provided');
+        }
+        if (hasPassword && !hasUsername) {
+            errors.push('Username is required when password is provided');
+        }
+
+        return {
+            valid: errors.length === 0,
+            errors: errors
+        };
+    }
+
+    /**
+     * Update profile with proxy configuration
+     * Property 7: Valid Proxy Save Round-Trip
+     * Property 8: Invalid Proxy Rejection
+     * 
+     * Requirements: 5.1, 6.1, 6.4
+     * - Build proxy object from form fields
+     * - Validate before sending
+     * - Send proxy: null if source is "none"
+     * 
+     * @param {string} profileId - Profile ID to update
+     */
     async updateProfile(profileId) {
+        // Build proxy object from form fields
+        const proxy = this.buildProxyFromForm();
+        
+        // Validate proxy configuration before sending
+        const validation = this.validateProxyConfig(proxy);
+        if (!validation.valid) {
+            this.showToast(validation.errors.join(', '), 'error');
+            return;
+        }
+
         const formData = {
             name: document.getElementById('editProfileName').value,
             timezone: document.getElementById('editTimezone').value,
@@ -987,7 +1372,8 @@ class BrowserShieldAdmin {
                 height: parseInt(document.getElementById('editHeight').value)
             },
             userAgent: document.getElementById('editUserAgent').value,
-            spoofFingerprint: document.getElementById('editSpoofFingerprint').checked
+            spoofFingerprint: document.getElementById('editSpoofFingerprint').checked,
+            proxy: proxy  // Include proxy in update (null if source is "none")
         };
 
         try {
@@ -1008,6 +1394,54 @@ class BrowserShieldAdmin {
         } catch (error) {
             this.showToast('Connection error', 'error');
         }
+    }
+
+    /**
+     * Build proxy object from form fields
+     * Returns null if proxy source is "none"
+     * Returns proxy object if source is "pool" or "manual"
+     * 
+     * Requirements: 5.1, 6.1, 6.4
+     * 
+     * @returns {Object|null} - Proxy configuration object or null
+     */
+    buildProxyFromForm() {
+        const source = document.getElementById('editProxySource')?.value;
+        
+        // If source is "none", return null to remove proxy
+        // Requirements: 6.4
+        if (source === 'none') {
+            return null;
+        }
+        
+        // Get values from form fields
+        const host = document.getElementById('editProxyHost')?.value?.trim() || '';
+        const portValue = document.getElementById('editProxyPort')?.value;
+        const type = document.getElementById('editProxyType')?.value || 'http';
+        const username = document.getElementById('editProxyUsername')?.value?.trim() || '';
+        const password = document.getElementById('editProxyPassword')?.value || '';
+        
+        // If host is empty, return null (no valid proxy)
+        if (!host) {
+            return null;
+        }
+        
+        // Build proxy object
+        const proxy = {
+            host: host,
+            port: portValue ? parseInt(portValue, 10) : null,
+            type: type
+        };
+        
+        // Only include username/password if provided
+        if (username) {
+            proxy.username = username;
+        }
+        if (password) {
+            proxy.password = password;
+        }
+        
+        return proxy;
     }
 
     // Browser control interface

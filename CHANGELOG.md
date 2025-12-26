@@ -1,5 +1,32 @@
 # BrowserShield Changelog
 
+## Version 1.4.0 - Profile Proxy Editor (2025-12-26)
+
+### 🎯 New Features
+- **NEW**: Profile Proxy Editor trong Edit Profile Modal
+- **NEW**: Proxy source selection (none/pool/manual)
+- **NEW**: Proxy pool dropdown với active proxy filtering
+- **NEW**: Manual proxy input với đầy đủ fields (host, port, type, username, password)
+- **NEW**: Current proxy display với password masking
+- **NEW**: Clear proxy functionality
+
+### 🔧 Proxy Validation
+- **IMPROVED**: Host validation (không empty)
+- **IMPROVED**: Port validation (range 1-65535)
+- **IMPROVED**: Type validation (http/https/socks4/socks5)
+- **IMPROVED**: Authentication consistency (username/password pair)
+
+### 🧪 Testing
+- **NEW**: 40 property-based tests cho Profile Proxy Editor
+- **NEW**: Comprehensive test coverage cho proxy validation
+- **NEW**: Round-trip tests cho proxy save/load
+
+### 📋 API Integration
+- **UPDATED**: Profile update API hỗ trợ proxy configuration
+- **UPDATED**: Profile details hiển thị proxy info
+
+---
+
 ## Version 1.3.0 - Firefox Mode Compatibility Update (2025-06-26)
 
 ### 🔧 Firefox Mode Fixes
