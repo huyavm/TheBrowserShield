@@ -1,9 +1,9 @@
 {
-  "mode": "mock",
-  "lastChanged": "2025-12-25T03:32:18.436Z",
+  "mode": "production",
+  "lastChanged": "2025-12-26T06:54:38.668Z",
   "capabilities": [
-    "Profile management",
-    "Session simulation",
-    "API testing"
+    "Real browser automation",
+    "Website interaction",
+    "Screenshot capture"
   ]
 }
