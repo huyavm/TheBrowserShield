@@ -5,6 +5,8 @@ class BrowserShieldAdmin {
         this.profiles = [];
         this.sessions = [];
         this.logs = [];
+        this.proxies = [];
+        this.proxyStats = null;
         this.currentSection = 'profiles';
         this.refreshInterval = null;
 
@@ -33,14 +35,52 @@ class BrowserShieldAdmin {
             this.createProfile();
         });
 
-        // Navigation clicks
+        // Navigation clicks - use closest() to handle clicks on nested elements (icons)
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
-                const section = e.target.getAttribute('href').substring(1);
-                this.showSection(section);
+                // Use closest() to get the nav-link element even if icon was clicked
+                const navLink = e.target.closest('.nav-link');
+                if (navLink) {
+                    const href = navLink.getAttribute('href');
+                    if (href) {
+                        const section = href.substring(1);
+                        this.showSection(section);
+                    }
+                }
             });
         });
+
+        // Add proxy form submission - wire up form submit event
+        const addProxyForm = document.getElementById('addProxyForm');
+        if (addProxyForm) {
+            addProxyForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.addProxy(e);
+            });
+        }
+
+        // Proxy form field validation on input - provide real-time feedback
+        const proxyHostInput = document.getElementById('proxyHost');
+        const proxyPortInput = document.getElementById('proxyPort');
+        
+        if (proxyHostInput) {
+            proxyHostInput.addEventListener('input', () => {
+                this.validateAddProxyForm();
+            });
+            proxyHostInput.addEventListener('blur', () => {
+                this.validateAddProxyForm();
+            });
+        }
+        
+        if (proxyPortInput) {
+            proxyPortInput.addEventListener('input', () => {
+                this.validateAddProxyForm();
+            });
+            proxyPortInput.addEventListener('blur', () => {
+                this.validateAddProxyForm();
+            });
+        }
 
         // Live logs toggle - restore from localStorage and sync with server
         const enableServerLogs = document.getElementById('enableServerLogs');
@@ -281,6 +321,211 @@ class BrowserShieldAdmin {
         }
     }
 
+    /**
+     * Load all proxies from API
+     * Fetches from /api/proxy and updates this.proxies
+     * Requirements: 2.3, 3.1
+     */
+    async loadProxies() {
+        // Show loading state in proxy table
+        const tbody = document.getElementById('proxyTableBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 mb-0">Loading proxies...</p>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        try {
+            console.log('Loading proxies...');
+            const response = await fetch(`${this.baseUrl}/api/proxy`);
+            const data = await response.json();
+
+            if (data.success && data.data) {
+                this.proxies = data.data;
+            } else if (Array.isArray(data)) {
+                this.proxies = data;
+            } else {
+                this.proxies = [];
+            }
+
+            this.renderProxyTable();
+            await this.loadProxyStats();
+            console.log(`Loaded ${this.proxies.length} proxies`);
+        } catch (error) {
+            console.error('Error loading proxies:', error);
+            this.showToast('Error loading proxies', 'error');
+            this.proxies = [];
+            this.renderProxyTable();
+        }
+    }
+
+    /**
+     * Load proxy pool statistics from API
+     * Fetches from /api/proxy/stats and updates stats cards
+     * Requirements: 2.3
+     */
+    async loadProxyStats() {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/proxy/stats`);
+            const data = await response.json();
+
+            if (data.success && data.data) {
+                this.proxyStats = data.data;
+                this.renderProxyStats(this.proxyStats);
+            }
+        } catch (error) {
+            console.error('Error loading proxy stats:', error);
+        }
+    }
+
+    /**
+     * Render proxy statistics to stats cards
+     * Updates proxyTotal, proxyActive, proxyUsage, proxyCountries elements
+     * Requirements: 2.1
+     * @param {Object} stats - Statistics object from API
+     */
+    renderProxyStats(stats) {
+        if (!stats) return;
+
+        const totalEl = document.getElementById('proxyTotal');
+        const activeEl = document.getElementById('proxyActive');
+        const usageEl = document.getElementById('proxyUsage');
+        const countriesEl = document.getElementById('proxyCountries');
+
+        if (totalEl) totalEl.textContent = stats.total || 0;
+        if (activeEl) activeEl.textContent = stats.active || 0;
+        if (usageEl) usageEl.textContent = stats.totalUsage || 0;
+        if (countriesEl) {
+            const countryCount = stats.byCountry ? Object.keys(stats.byCountry).length : 0;
+            countriesEl.textContent = countryCount;
+        }
+
+        // Also update the main stats card for proxies
+        const totalProxiesEl = document.getElementById('totalProxies');
+        if (totalProxiesEl) {
+            totalProxiesEl.textContent = stats.total || 0;
+        }
+    }
+
+    /**
+     * Render proxy table with all proxies
+     * Displays status indicator, type badge, auth icon for each proxy
+     * Requirements: 3.1, 3.2, 3.3, 3.4
+     */
+    renderProxyTable() {
+        const tbody = document.getElementById('proxyTableBody');
+        if (!tbody) return;
+
+        if (this.proxies.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center p-4">
+                        <i class="fas fa-server fa-3x text-muted mb-3"></i>
+                        <p class="mb-0">No proxies found. Add proxies using the form above.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        const rows = this.proxies.map(proxy => {
+            // Status indicator color - Requirements 3.3
+            const statusColor = this.getProxyStatusColor(proxy.active);
+            const statusText = proxy.active ? 'Active' : 'Inactive';
+
+            // Type badge color - Requirements 3.4
+            const typeBadge = this.getProxyTypeBadge(proxy.type);
+
+            // Auth icon - Requirements 3.2
+            const authIcon = this.getProxyAuthIcon(proxy.username, proxy.password);
+
+            return `
+                <tr data-proxy-id="${proxy.id}">
+                    <td>
+                        <span class="badge ${statusColor}">${statusText}</span>
+                    </td>
+                    <td>
+                        ${authIcon}
+                        <span>${proxy.host}:${proxy.port}</span>
+                    </td>
+                    <td>
+                        <span class="badge ${typeBadge.class}" style="background-color: ${typeBadge.bgColor}; color: ${typeBadge.textColor};">
+                            ${(proxy.type || 'http').toUpperCase()}
+                        </span>
+                    </td>
+                    <td>${proxy.country || '-'}</td>
+                    <td>${proxy.usageCount || 0}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-info" onclick="browserShieldAdmin.testProxy('${proxy.id}')" title="Test">
+                                <i class="fas fa-vial"></i>
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="browserShieldAdmin.toggleProxy('${proxy.id}')" title="Toggle">
+                                <i class="fas fa-power-off"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="browserShieldAdmin.deleteProxy('${proxy.id}')" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        tbody.innerHTML = rows;
+    }
+
+    /**
+     * Get status indicator color based on proxy active state
+     * Property 4: Status Color Mapping
+     * Requirements: 3.3
+     * @param {boolean} active - Proxy active status
+     * @returns {string} Bootstrap badge class
+     */
+    getProxyStatusColor(active) {
+        return active === true ? 'bg-success' : 'bg-danger';
+    }
+
+    /**
+     * Get type badge styling based on proxy type
+     * Property 5: Type Badge Color Mapping
+     * Requirements: 3.4
+     * @param {string} type - Proxy type (http, https, socks4, socks5)
+     * @returns {Object} Badge styling object with class, bgColor, textColor
+     */
+    getProxyTypeBadge(type) {
+        const typeColors = {
+            'http': { class: 'badge-http', bgColor: '#e3f2fd', textColor: '#1565c0' },
+            'https': { class: 'badge-https', bgColor: '#e8f5e9', textColor: '#2e7d32' },
+            'socks4': { class: 'badge-socks4', bgColor: '#fff3e0', textColor: '#e65100' },
+            'socks5': { class: 'badge-socks5', bgColor: '#fce4ec', textColor: '#c2185b' }
+        };
+        const normalizedType = (type || 'http').toLowerCase();
+        return typeColors[normalizedType] || typeColors['http'];
+    }
+
+    /**
+     * Get auth icon HTML if proxy has credentials
+     * Property 3: Credential Indicator Display
+     * Requirements: 3.2
+     * @param {string|null} username - Proxy username
+     * @param {string|null} password - Proxy password
+     * @returns {string} HTML string for auth icon or empty string
+     */
+    getProxyAuthIcon(username, password) {
+        if (username && password) {
+            return '<i class="fas fa-key text-warning me-2" title="Authenticated"></i>';
+        }
+        return '';
+    }
+
     async updateStats() {
         try {
             // Safely update profile count
@@ -312,10 +557,20 @@ class BrowserShieldAdmin {
                 }
             }
 
-            // Safely update proxy count
-            const totalProxiesEl = document.getElementById('totalProxies');
-            if (totalProxiesEl) {
-                totalProxiesEl.textContent = '5';
+            // Safely update proxy count from API
+            try {
+                const proxyResponse = await fetch(`${this.baseUrl}/api/proxy/stats`);
+                const proxyData = await proxyResponse.json();
+                const totalProxiesEl = document.getElementById('totalProxies');
+                if (proxyData.success && proxyData.data && totalProxiesEl) {
+                    totalProxiesEl.textContent = proxyData.data.total || 0;
+                }
+            } catch (proxyError) {
+                console.warn('Could not load proxy stats:', proxyError);
+                const totalProxiesEl = document.getElementById('totalProxies');
+                if (totalProxiesEl) {
+                    totalProxiesEl.textContent = '0';
+                }
             }
 
             // Safely update uptime
@@ -565,6 +820,18 @@ class BrowserShieldAdmin {
     }
 
     async createProfile() {
+        // Build proxy object from create form
+        const proxy = this.buildCreateProxyFromForm();
+        
+        // Validate proxy configuration if provided
+        if (proxy !== null) {
+            const validation = this.validateProxyConfig(proxy);
+            if (!validation.valid) {
+                this.showToast(validation.errors.join(', '), 'error');
+                return;
+            }
+        }
+
         const formData = {
             name: document.getElementById('profileName').value,
             userAgent: document.getElementById('userAgent').value,
@@ -573,7 +840,8 @@ class BrowserShieldAdmin {
                 width: parseInt(document.getElementById('viewportWidth').value),
                 height: parseInt(document.getElementById('viewportHeight').value)
             },
-            autoNavigateUrl: document.getElementById('autoNavigateUrl').value || null
+            autoNavigateUrl: document.getElementById('autoNavigateUrl').value || null,
+            proxy: proxy  // Include proxy in create request
         };
 
         try {
@@ -813,6 +1081,11 @@ class BrowserShieldAdmin {
         }
 
         this.currentSection = sectionName;
+
+        // Load section-specific data
+        if (sectionName === 'proxies') {
+            this.loadProxies();
+        }
     }
 
     showCreateProfile() {
@@ -825,6 +1098,223 @@ class BrowserShieldAdmin {
         const modal = bootstrap.Modal.getInstance(document.getElementById('createProfileModal'));
         if (modal) modal.hide();
         document.getElementById('profileForm').reset();
+        // Reset proxy section
+        this.resetCreateProxySection();
+    }
+
+    /**
+     * Reset create profile proxy section to default state
+     * Requirements: 7.1
+     */
+    resetCreateProxySection() {
+        const sourceEl = document.getElementById('createProxySource');
+        const poolSection = document.getElementById('createProxyPoolSection');
+        const manualSection = document.getElementById('createManualProxySection');
+        
+        if (sourceEl) sourceEl.value = 'none';
+        if (poolSection) poolSection.style.display = 'none';
+        if (manualSection) manualSection.style.display = 'none';
+        
+        // Clear proxy fields
+        const fields = ['createProxyHost', 'createProxyPort', 'createProxyUsername', 'createProxyPassword'];
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const typeEl = document.getElementById('createProxyType');
+        if (typeEl) typeEl.value = 'http';
+        const poolEl = document.getElementById('createProxyPool');
+        if (poolEl) poolEl.value = '';
+    }
+
+    /**
+     * Handle proxy source change in create profile modal
+     * Toggle visibility of proxyPoolSection and manualProxySection
+     * Requirements: 7.1
+     */
+    handleCreateProxySourceChange() {
+        const source = document.getElementById('createProxySource')?.value;
+        const poolSection = document.getElementById('createProxyPoolSection');
+        const manualSection = document.getElementById('createManualProxySection');
+        
+        if (!poolSection || !manualSection) return;
+        
+        // Clear fields when switching source
+        const fields = ['createProxyHost', 'createProxyPort', 'createProxyUsername', 'createProxyPassword'];
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const typeEl = document.getElementById('createProxyType');
+        if (typeEl) typeEl.value = 'http';
+        const poolEl = document.getElementById('createProxyPool');
+        if (poolEl) poolEl.value = '';
+        
+        // Hide all sections first
+        poolSection.style.display = 'none';
+        manualSection.style.display = 'none';
+        
+        if (source === 'pool') {
+            poolSection.style.display = 'block';
+            manualSection.style.display = 'block';
+            // Load proxy pool for dropdown
+            this.loadCreateProxyPool();
+        } else if (source === 'manual') {
+            manualSection.style.display = 'block';
+        }
+        // If 'none', both sections stay hidden
+    }
+
+    /**
+     * Load proxy pool for create profile dropdown
+     * Fetches proxies from API and filters only active ones
+     * Requirements: 7.1
+     */
+    async loadCreateProxyPool() {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/proxy`);
+            const data = await response.json();
+            
+            const dropdown = document.getElementById('createProxyPool');
+            if (!dropdown) return [];
+            
+            if (data.success && data.data && data.data.length > 0) {
+                // Filter only active proxies
+                const activeProxies = this.filterActiveProxies(data.data);
+                
+                if (activeProxies.length === 0) {
+                    dropdown.innerHTML = '<option value="">No active proxies available</option>';
+                    return [];
+                }
+                
+                dropdown.innerHTML = '<option value="">-- Select a proxy --</option>' +
+                    activeProxies.map(proxy => 
+                        `<option value="${proxy.id}" data-proxy='${JSON.stringify(proxy)}'>
+                            ${proxy.host}:${proxy.port} (${proxy.type || 'http'})${proxy.country ? ' - ' + proxy.country : ''}
+                        </option>`
+                    ).join('');
+                
+                return activeProxies;
+            } else {
+                dropdown.innerHTML = '<option value="">No proxies available</option>';
+                return [];
+            }
+        } catch (error) {
+            console.error('Error loading proxy pool:', error);
+            const dropdown = document.getElementById('createProxyPool');
+            if (dropdown) {
+                dropdown.innerHTML = '<option value="">Error loading proxies</option>';
+            }
+            return [];
+        }
+    }
+
+    /**
+     * Populate create proxy fields from pool selection
+     * Fill all form fields with data from selected proxy
+     * Requirements: 7.1
+     */
+    populateCreateProxyFromPool() {
+        const dropdown = document.getElementById('createProxyPool');
+        if (!dropdown) return;
+        
+        const selectedOption = dropdown.options[dropdown.selectedIndex];
+        if (!selectedOption || !selectedOption.value) return;
+        
+        try {
+            const proxyData = JSON.parse(selectedOption.dataset.proxy);
+            
+            // Populate all form fields with proxy data
+            document.getElementById('createProxyHost').value = proxyData.host || '';
+            document.getElementById('createProxyPort').value = proxyData.port || '';
+            document.getElementById('createProxyType').value = proxyData.type || 'http';
+            document.getElementById('createProxyUsername').value = proxyData.username || '';
+            document.getElementById('createProxyPassword').value = proxyData.password || '';
+        } catch (error) {
+            console.error('Error parsing proxy data:', error);
+        }
+    }
+
+    /**
+     * Build proxy object from create profile form fields
+     * Returns null if proxy source is "none"
+     * Returns proxy object if source is "pool" or "manual"
+     * Requirements: 7.1, 7.2
+     * 
+     * @returns {Object|null} - Proxy configuration object or null
+     */
+    buildCreateProxyFromForm() {
+        const source = document.getElementById('createProxySource')?.value;
+        
+        // If source is "none", return null (no proxy)
+        if (source === 'none') {
+            return null;
+        }
+        
+        // Get values from form fields
+        const host = document.getElementById('createProxyHost')?.value?.trim() || '';
+        const portValue = document.getElementById('createProxyPort')?.value;
+        const type = document.getElementById('createProxyType')?.value || 'http';
+        const username = document.getElementById('createProxyUsername')?.value?.trim() || '';
+        const password = document.getElementById('createProxyPassword')?.value || '';
+        
+        // If host is empty, return null (no valid proxy)
+        if (!host) {
+            return null;
+        }
+        
+        // Build proxy object
+        const proxy = {
+            host: host,
+            port: portValue ? parseInt(portValue, 10) : null,
+            type: type
+        };
+        
+        // Only include username/password if provided
+        if (username) {
+            proxy.username = username;
+        }
+        if (password) {
+            proxy.password = password;
+        }
+        
+        return proxy;
+    }
+
+    /**
+     * Assign proxy to profile
+     * Updates profile with proxy configuration
+     * Property 9: Profile-Proxy Assignment Consistency
+     * Requirements: 7.2
+     * 
+     * @param {string} profileId - Profile ID to update
+     * @param {Object|null} proxy - Proxy configuration or null to clear
+     * @returns {Promise<boolean>} - Success status
+     */
+    async assignProxyToProfile(profileId, proxy) {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/profiles/${profileId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ proxy: proxy })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    // Update local profile data
+                    const profile = this.profiles.find(p => p.id === profileId);
+                    if (profile) {
+                        profile.proxy = proxy;
+                    }
+                    return true;
+                }
+            }
+            return false;
+        } catch (error) {
+            console.error('Error assigning proxy to profile:', error);
+            return false;
+        }
     }
 
     submitCreateProfile() {
@@ -885,6 +1375,84 @@ class BrowserShieldAdmin {
         toastElement.addEventListener('hidden.bs.toast', () => {
             toastElement.remove();
         });
+    }
+
+    /**
+     * Show loading state on a button
+     * Requirements: 4.3 - Show spinners during API calls
+     * @param {HTMLElement|string} buttonOrId - Button element or ID
+     * @param {boolean} loading - Whether to show loading state
+     * @param {string} originalText - Original button text to restore
+     */
+    setButtonLoading(buttonOrId, loading, originalText = '') {
+        const button = typeof buttonOrId === 'string' 
+            ? document.getElementById(buttonOrId) 
+            : buttonOrId;
+        
+        if (!button) return;
+        
+        if (loading) {
+            button.disabled = true;
+            button.dataset.originalHtml = button.innerHTML;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading...';
+        } else {
+            button.disabled = false;
+            button.innerHTML = button.dataset.originalHtml || originalText;
+        }
+    }
+
+    /**
+     * Show loading overlay on a container
+     * Requirements: 4.3 - Show spinners during API calls
+     * @param {string} containerId - Container element ID
+     * @param {boolean} loading - Whether to show loading state
+     */
+    setContainerLoading(containerId, loading) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        if (loading) {
+            container.classList.add('loading');
+            // Add loading overlay if not exists
+            if (!container.querySelector('.loading-overlay')) {
+                const overlay = document.createElement('div');
+                overlay.className = 'loading-overlay';
+                overlay.innerHTML = `
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                `;
+                overlay.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center; z-index: 10;';
+                container.style.position = 'relative';
+                container.appendChild(overlay);
+            }
+        } else {
+            container.classList.remove('loading');
+            const overlay = container.querySelector('.loading-overlay');
+            if (overlay) {
+                overlay.remove();
+            }
+        }
+    }
+
+    /**
+     * Handle API errors gracefully
+     * Requirements: 4.3 - Handle errors gracefully
+     * @param {Error} error - Error object
+     * @param {string} context - Context description for error message
+     */
+    handleApiError(error, context = 'operation') {
+        console.error(`Error during ${context}:`, error);
+        
+        let message = 'An unexpected error occurred';
+        
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            message = 'Network error. Please check your connection.';
+        } else if (error.message) {
+            message = error.message;
+        }
+        
+        this.showToast(`${context}: ${message}`, 'error');
     }
 
     formatUptime(seconds) {
@@ -1673,6 +2241,551 @@ document.querySelector('input[type="text"]').value = 'Hello World';</textarea>
 
     executeScript(profileId) {
         this.openBrowserControl(profileId);
+    }
+
+    /**
+     * Validate add proxy form fields
+     * Property 6: Form Validation for Required Fields
+     * Requirements: 4.4
+     * 
+     * Validates:
+     * - Host must be a non-empty string (not whitespace-only)
+     * - Port must be an integer between 1 and 65535
+     * 
+     * @returns {Object} - { valid: boolean, errors: { host: string|null, port: string|null } }
+     */
+    validateAddProxyForm() {
+        const hostEl = document.getElementById('proxyHost');
+        const portEl = document.getElementById('proxyPort');
+        
+        const host = hostEl?.value?.trim() || '';
+        const portValue = portEl?.value;
+        
+        const errors = {
+            host: null,
+            port: null
+        };
+        
+        // Validate host - must be non-empty string (not whitespace-only)
+        if (!host || host.length === 0) {
+            errors.host = 'Host is required';
+        }
+        
+        // Validate port - must be integer between 1 and 65535
+        if (!portValue || portValue === '') {
+            errors.port = 'Valid port is required (1-65535)';
+        } else {
+            const portNum = parseInt(portValue, 10);
+            if (isNaN(portNum) || portNum < 1 || portNum > 65535) {
+                errors.port = 'Valid port is required (1-65535)';
+            }
+        }
+        
+        // Update UI with validation feedback
+        if (hostEl) {
+            if (errors.host) {
+                hostEl.classList.add('is-invalid');
+                hostEl.classList.remove('is-valid');
+            } else {
+                hostEl.classList.remove('is-invalid');
+                hostEl.classList.add('is-valid');
+            }
+        }
+        
+        if (portEl) {
+            if (errors.port) {
+                portEl.classList.add('is-invalid');
+                portEl.classList.remove('is-valid');
+            } else {
+                portEl.classList.remove('is-invalid');
+                portEl.classList.add('is-valid');
+            }
+        }
+        
+        return {
+            valid: !errors.host && !errors.port,
+            errors: errors
+        };
+    }
+
+    /**
+     * Add a single proxy to the pool
+     * Requirements: 4.1, 4.2, 4.3
+     * 
+     * - Validates form fields before submission
+     * - POST to /api/proxy endpoint
+     * - Shows success/error toast notification
+     * - Refreshes proxy list on success
+     * 
+     * @param {Event} event - Form submit event
+     */
+    async addProxy(event) {
+        if (event) {
+            event.preventDefault();
+        }
+        
+        // Validate form - Requirements: 4.4
+        const validation = this.validateAddProxyForm();
+        if (!validation.valid) {
+            // Show first error in toast
+            const firstError = validation.errors.host || validation.errors.port;
+            this.showToast(firstError, 'error');
+            return;
+        }
+        
+        // Build proxy data from form
+        const proxyData = {
+            host: document.getElementById('proxyHost').value.trim(),
+            port: parseInt(document.getElementById('proxyPort').value, 10),
+            type: document.getElementById('proxyType')?.value || 'http',
+            country: document.getElementById('proxyCountry')?.value?.trim() || null,
+            provider: document.getElementById('proxyProvider')?.value?.trim() || null,
+            username: document.getElementById('proxyUsername')?.value?.trim() || null,
+            password: document.getElementById('proxyPassword')?.value || null
+        };
+        
+        // Remove null values for cleaner request
+        Object.keys(proxyData).forEach(key => {
+            if (proxyData[key] === null || proxyData[key] === '') {
+                delete proxyData[key];
+            }
+        });
+        
+        // Get submit button and show loading state - Requirements: 4.3
+        const submitBtn = document.querySelector('#addProxyForm button[type="submit"]');
+        this.setButtonLoading(submitBtn, true);
+        
+        try {
+            // POST to /api/proxy - Requirements: 4.1
+            const response = await fetch(`${this.baseUrl}/api/proxy`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(proxyData)
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                // Success - Requirements: 4.2
+                this.showToast(`Proxy ${proxyData.host}:${proxyData.port} added successfully`, 'success');
+                
+                // Clear form
+                this.clearAddProxyForm();
+                
+                // Refresh proxy list
+                await this.loadProxies();
+                await this.updateStats();
+            } else {
+                // Error - Requirements: 4.3
+                const errorMessage = data.message || data.errors?.[0]?.message || 'Failed to add proxy';
+                this.showToast(errorMessage, 'error');
+            }
+        } catch (error) {
+            // Network/connection error - Requirements: 4.3
+            this.handleApiError(error, 'Adding proxy');
+        } finally {
+            // Reset loading state
+            this.setButtonLoading(submitBtn, false);
+        }
+    }
+
+    /**
+     * Clear the add proxy form and reset validation states
+     */
+    clearAddProxyForm() {
+        const form = document.getElementById('addProxyForm');
+        if (form) {
+            form.reset();
+        }
+        
+        // Clear validation states
+        const fields = ['proxyHost', 'proxyPort'];
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('is-valid', 'is-invalid');
+            }
+        });
+    }
+
+    /**
+     * Parse a single proxy line into proxy data object
+     * Property 7: Bulk Import Parsing
+     * Requirements: 5.1, 5.3
+     * 
+     * Format: host:port or host:port:username:password
+     * Lines with at least 2 parts (host:port) are valid
+     * Lines with fewer than 2 parts are invalid
+     * 
+     * @param {string} line - Single line of proxy text
+     * @returns {Object|null} Parsed proxy data or null if invalid
+     */
+    parseProxyLine(line) {
+        if (!line || typeof line !== 'string') {
+            return null;
+        }
+        
+        const trimmedLine = line.trim();
+        if (!trimmedLine) {
+            return null;
+        }
+        
+        const parts = trimmedLine.split(':');
+        
+        // Must have at least 2 parts (host:port)
+        if (parts.length < 2) {
+            return null;
+        }
+        
+        const host = parts[0].trim();
+        const portStr = parts[1].trim();
+        
+        // Validate host is non-empty
+        if (!host) {
+            return null;
+        }
+        
+        // Validate port is a valid integer between 1-65535
+        const port = parseInt(portStr, 10);
+        if (isNaN(port) || port < 1 || port > 65535) {
+            return null;
+        }
+        
+        const proxyData = {
+            host: host,
+            port: port,
+            type: 'http' // Default type
+        };
+        
+        // Optional: username (part 3)
+        if (parts.length >= 3 && parts[2].trim()) {
+            proxyData.username = parts[2].trim();
+        }
+        
+        // Optional: password (part 4)
+        if (parts.length >= 4 && parts[3].trim()) {
+            proxyData.password = parts[3].trim();
+        }
+        
+        return proxyData;
+    }
+
+    /**
+     * Import multiple proxies from bulk text input
+     * Requirements: 5.1, 5.2, 5.3
+     * 
+     * - Parses text lines in format "host:port:user:pass" (one per line)
+     * - Adds valid proxies to the pool
+     * - Shows summary toast with success/failure counts
+     * - Skips lines with invalid format (less than 2 parts)
+     */
+    async importBulkProxies() {
+        const textarea = document.getElementById('bulkProxyInput');
+        if (!textarea) {
+            this.showToast('Bulk import textarea not found', 'error');
+            return;
+        }
+        
+        const text = textarea.value;
+        if (!text || !text.trim()) {
+            this.showToast('Please enter proxies to import', 'warning');
+            return;
+        }
+        
+        // Split by newlines and filter empty lines
+        const lines = text.split('\n').filter(line => line.trim());
+        
+        if (lines.length === 0) {
+            this.showToast('No valid lines found', 'warning');
+            return;
+        }
+        
+        // Get import button and show loading state - Requirements: 4.3
+        const importBtn = document.querySelector('#proxies-section .btn-success');
+        this.setButtonLoading(importBtn, true);
+        
+        let successCount = 0;
+        let failureCount = 0;
+        
+        try {
+            // Process each line
+            for (const line of lines) {
+                const proxyData = this.parseProxyLine(line);
+                
+                if (!proxyData) {
+                    // Invalid format - Requirements: 5.3
+                    failureCount++;
+                    continue;
+                }
+                
+                try {
+                    // POST to /api/proxy
+                    const response = await fetch(`${this.baseUrl}/api/proxy`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(proxyData)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok && data.success) {
+                        successCount++;
+                    } else {
+                        failureCount++;
+                    }
+                } catch (error) {
+                    console.error('Error adding proxy:', error);
+                    failureCount++;
+                }
+            }
+            
+            // Show summary toast - Requirements: 5.2
+            if (successCount > 0 && failureCount === 0) {
+                this.showToast(`Successfully imported ${successCount} proxies`, 'success');
+            } else if (successCount > 0 && failureCount > 0) {
+                this.showToast(`Imported ${successCount} proxies, ${failureCount} failed`, 'warning');
+            } else {
+                this.showToast(`Import failed: ${failureCount} proxies could not be added`, 'error');
+            }
+            
+            // Clear textarea
+            textarea.value = '';
+            
+            // Refresh proxy list and stats
+            await this.loadProxies();
+            await this.updateStats();
+        } catch (error) {
+            this.handleApiError(error, 'Bulk import');
+        } finally {
+            // Reset loading state
+            this.setButtonLoading(importBtn, false);
+        }
+    }
+
+    /**
+     * Test a proxy's connectivity
+     * Requirements: 6.1
+     * 
+     * - POST to /api/proxy/:id/test endpoint
+     * - Display test result in toast notification
+     * 
+     * @param {string} proxyId - ID of the proxy to test
+     */
+    async testProxy(proxyId) {
+        // Find the test button for this proxy and show loading state
+        const testBtn = document.querySelector(`tr[data-proxy-id="${proxyId}"] .btn-outline-info`);
+        this.setButtonLoading(testBtn, true);
+        
+        try {
+            this.showToast('Testing proxy...', 'info');
+            
+            const response = await fetch(`${this.baseUrl}/api/proxy/${proxyId}/test`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                const result = data.data;
+                const latency = result.latency ? `${result.latency}ms` : 'N/A';
+                const ip = result.ip || 'Unknown';
+                this.showToast(`Proxy test passed! Latency: ${latency}, IP: ${ip}`, 'success');
+            } else {
+                const errorMessage = data.message || 'Proxy test failed';
+                this.showToast(`Proxy test failed: ${errorMessage}`, 'error');
+            }
+        } catch (error) {
+            this.handleApiError(error, 'Testing proxy');
+        } finally {
+            this.setButtonLoading(testBtn, false);
+        }
+    }
+
+    /**
+     * Toggle a proxy's active status
+     * Property 8: Toggle Status Flip
+     * Requirements: 6.2
+     * 
+     * - POST to /api/proxy/:id/toggle endpoint
+     * - Update UI to reflect new status
+     * - Proxy's active status should flip from true to false or vice versa
+     * 
+     * @param {string} proxyId - ID of the proxy to toggle
+     */
+    async toggleProxy(proxyId) {
+        // Find the toggle button for this proxy and show loading state
+        const toggleBtn = document.querySelector(`tr[data-proxy-id="${proxyId}"] .btn-outline-warning`);
+        this.setButtonLoading(toggleBtn, true);
+        
+        try {
+            const response = await fetch(`${this.baseUrl}/api/proxy/${proxyId}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                const newStatus = data.data.active;
+                const statusText = newStatus ? 'activated' : 'deactivated';
+                this.showToast(`Proxy ${statusText} successfully`, 'success');
+                
+                // Update local proxy data
+                const proxy = this.proxies.find(p => p.id === proxyId);
+                if (proxy) {
+                    proxy.active = newStatus;
+                }
+                
+                // Re-render table and update stats
+                this.renderProxyTable();
+                await this.loadProxyStats();
+                await this.updateStats();
+            } else {
+                const errorMessage = data.message || 'Failed to toggle proxy';
+                this.showToast(errorMessage, 'error');
+            }
+        } catch (error) {
+            this.handleApiError(error, 'Toggling proxy');
+        } finally {
+            this.setButtonLoading(toggleBtn, false);
+        }
+    }
+
+    /**
+     * Delete a single proxy
+     * Requirements: 6.3
+     * 
+     * - Show confirmation dialog before deletion
+     * - DELETE request to /api/proxy/:id endpoint
+     * - Refresh proxy list on success
+     * 
+     * @param {string} proxyId - ID of the proxy to delete
+     */
+    async deleteProxy(proxyId) {
+        // Show confirmation dialog - Requirements: 6.3
+        if (!confirm('Are you sure you want to delete this proxy?')) {
+            return;
+        }
+        
+        // Find the delete button for this proxy and show loading state
+        const deleteBtn = document.querySelector(`tr[data-proxy-id="${proxyId}"] .btn-outline-danger`);
+        this.setButtonLoading(deleteBtn, true);
+        
+        try {
+            const response = await fetch(`${this.baseUrl}/api/proxy/${proxyId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+                this.showToast('Proxy deleted successfully', 'success');
+                
+                // Refresh proxy list and stats
+                await this.loadProxies();
+                await this.updateStats();
+            } else {
+                const errorMessage = data.message || 'Failed to delete proxy';
+                this.showToast(errorMessage, 'error');
+            }
+        } catch (error) {
+            this.handleApiError(error, 'Deleting proxy');
+        } finally {
+            this.setButtonLoading(deleteBtn, false);
+        }
+    }
+
+    /**
+     * Delete all proxies from the pool
+     * Requirements: 6.4
+     * 
+     * - Show confirmation dialog before deletion
+     * - DELETE all proxies one by one (or use bulk endpoint if available)
+     * - Refresh proxy list on completion
+     */
+    async deleteAllProxies() {
+        // Show confirmation dialog - Requirements: 6.4
+        if (!confirm('Are you sure you want to delete ALL proxies? This action cannot be undone.')) {
+            return;
+        }
+        
+        // Double confirmation for destructive action
+        if (!confirm('This will permanently delete all proxies. Are you absolutely sure?')) {
+            return;
+        }
+        
+        // Find the delete all button and show loading state
+        const deleteAllBtn = document.querySelector('#proxies-section .btn-outline-danger');
+        this.setButtonLoading(deleteAllBtn, true);
+        
+        try {
+            // Try bulk delete endpoint first
+            const response = await fetch(`${this.baseUrl}/api/proxy/all`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    this.showToast('All proxies deleted successfully', 'success');
+                    await this.loadProxies();
+                    await this.updateStats();
+                    return;
+                }
+            }
+            
+            // Fallback: delete proxies one by one
+            let deletedCount = 0;
+            let failedCount = 0;
+            
+            for (const proxy of [...this.proxies]) {
+                try {
+                    const deleteResponse = await fetch(`${this.baseUrl}/api/proxy/${proxy.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (deleteResponse.ok) {
+                        deletedCount++;
+                    } else {
+                        failedCount++;
+                    }
+                } catch (err) {
+                    failedCount++;
+                }
+            }
+            
+            if (failedCount === 0) {
+                this.showToast(`Deleted ${deletedCount} proxies successfully`, 'success');
+            } else {
+                this.showToast(`Deleted ${deletedCount} proxies, ${failedCount} failed`, 'warning');
+            }
+            
+            // Refresh proxy list and stats
+            await this.loadProxies();
+            await this.updateStats();
+        } catch (error) {
+            this.handleApiError(error, 'Deleting all proxies');
+        } finally {
+            this.setButtonLoading(deleteAllBtn, false);
+        }
     }
 }
 
