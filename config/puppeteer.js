@@ -3,8 +3,14 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const AntiDetectionSuite = require('./AntiDetectionSuite');
 const browserDetector = require('../utils/browser-detector');
 
-// Add stealth plugin to avoid detection
-puppeteer.use(StealthPlugin());
+// Configure stealth plugin with specific evasions
+const stealth = StealthPlugin();
+// Disable some stealth evasions that might conflict with our custom implementation
+stealth.enabledEvasions.delete('chrome.runtime');
+stealth.enabledEvasions.delete('navigator.webdriver');
+stealth.enabledEvasions.delete('navigator.plugins');
+
+puppeteer.use(stealth);
 
 /**
  * Get available browser executable path with cross-platform support
@@ -54,7 +60,6 @@ const PUPPETEER_CONFIG = {
         '--disable-ipc-flooding-protection',
         '--disable-background-networking',
         '--disable-default-apps',
-        '--disable-extensions',
         '--disable-sync',
         '--disable-translate',
         '--hide-scrollbars',
@@ -74,10 +79,13 @@ const PUPPETEER_CONFIG = {
         '--disable-logging',
         '--disable-system-font-check',
         '--log-level=3',
-        '--start-maximized'
+        '--start-maximized',
+        // CRITICAL: These flags hide automation detection
+        '--disable-blink-features=AutomationControlled',
+        '--disable-infobars'
     ],
-    // Reduce memory usage and improve stability
-    ignoreDefaultArgs: ['--disable-extensions'],
+    // CRITICAL: Exclude enable-automation switch to hide webdriver
+    ignoreDefaultArgs: ['--enable-automation'],
     defaultViewport: null,
     timeout: 60000,
     protocolTimeout: 60000
@@ -101,6 +109,9 @@ async function createBrowserWithProfile(profile, options = {}) {
     const userDataDir = `./data/browser-profiles/${profile.id}`;
     config.userDataDir = userDataDir;
     
+    // Clone args array to avoid modifying the original
+    config.args = [...PUPPETEER_CONFIG.args];
+    
     // Add proxy configuration if provided
     if (profile.proxy && profile.proxy.host && profile.proxy.port) {
         const proxyUrl = `${profile.proxy.type || 'http'}://${profile.proxy.host}:${profile.proxy.port}`;
@@ -111,7 +122,8 @@ async function createBrowserWithProfile(profile, options = {}) {
     const browser = await puppeteer.launch(config);
     const page = await browser.newPage();
     
-    // Apply profile settings
+    // CRITICAL: Apply anti-detection BEFORE any navigation
+    // evaluateOnNewDocument must be called before page loads
     await applyProfileSettings(page, profile);
     
     return { browser, page };
@@ -155,42 +167,12 @@ async function applyProfileSettings(page, profile) {
 }
 
 /**
- * Apply additional spoofing techniques
+ * Apply additional spoofing techniques (legacy - kept for backward compatibility)
+ * Note: Most of these are now handled by AntiDetectionSuite
  * @param {Object} page - Puppeteer page instance
  */
 async function applySpoofingTechniques(page) {
-    // Override navigator properties
-    await page.evaluateOnNewDocument(() => {
-        // Spoof webdriver property
-        Object.defineProperty(navigator, 'webdriver', {
-            get: () => undefined,
-        });
-        
-        // Spoof languages
-        Object.defineProperty(navigator, 'languages', {
-            get: () => ['en-US', 'en'],
-        });
-        
-        // Spoof plugins
-        Object.defineProperty(navigator, 'plugins', {
-            get: () => [1, 2, 3, 4, 5],
-        });
-        
-        // Spoof permissions
-        const originalQuery = window.navigator.permissions.query;
-        window.navigator.permissions.query = (parameters) => (
-            parameters.name === 'notifications' ?
-                Promise.resolve({ state: Notification.permission }) :
-                originalQuery(parameters)
-        );
-        
-        // Remove webdriver traces
-        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
-        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
-        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
-    });
-    
-    // Set additional headers
+    // Set additional headers for more realistic browser behavior
     await page.setExtraHTTPHeaders({
         'Accept-Language': 'en-US,en;q=0.9',
         'Accept-Encoding': 'gzip, deflate, br',
@@ -198,6 +180,23 @@ async function applySpoofingTechniques(page) {
         'Upgrade-Insecure-Requests': '1',
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache'
+    });
+    
+    // Additional cleanup of automation traces
+    await page.evaluateOnNewDocument(() => {
+        // Remove Chrome DevTools Protocol traces
+        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+        delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+        
+        // Clean up any $cdc_ variables that might be injected
+        Object.keys(window).forEach(key => {
+            if (key.match(/^\$cdc_/) || key.match(/^cdc_/)) {
+                try {
+                    delete window[key];
+                } catch (e) {}
+            }
+        });
     });
 }
 

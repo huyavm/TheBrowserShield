@@ -212,7 +212,7 @@ describe('Visible Browser Mode - Property Tests', () => {
                         
                         // Act & Assert - Attempting to start another session should throw
                         await expect(browserService.startBrowser(profileId))
-                            .rejects.toThrow(`Browser is already running for profile ${profileId}`);
+                            .rejects.toThrow('Browser session already running for this profile');
                         
                         // Cleanup
                         await browserService.stopAllBrowsers();

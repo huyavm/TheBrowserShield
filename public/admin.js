@@ -593,12 +593,13 @@ class BrowserShieldAdmin {
                 await this.loadProfiles();
                 await this.updateStats();
 
-                // Add to logs
+                // Add to logs - use data.data instead of data.profile
+                const createdProfile = data.data || data.profile;
                 this.logs.unshift({
                     timestamp: new Date().toISOString(),
                     action: 'Profile Created',
                     details: `New profile "${formData.name}" created`,
-                    profileId: data.profile.id
+                    profileId: createdProfile?.id
                 });
                 this.renderLogs();
             } else {

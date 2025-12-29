@@ -381,3 +381,4 @@ router.get('/system/stats', async (req, res, next) => {
 });
 
 module.exports = router;
+module.exports.browserService = browserService;
