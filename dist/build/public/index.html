@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anti-Detect Browser Profile Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .profile-card {
+            transition: transform 0.2s;
+        }
+        .profile-card:hover {
+            transform: translateY(-2px);
+        }
+        .status-running {
+            color: #28a745;
+        }
+        .status-stopped {
+            color: #6c757d;
+        }
+        .fingerprint-badge {
+            font-size: 0.75rem;
+        }
+        .proxy-info {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-shield-lock"></i>
+                Anti-Detect Browser Manager
+            </span>
+            <div class="d-flex">
+                <div class="dropdown me-2">
+                    <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-book"></i> Docs
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/INSTALL.md" target="_blank">
+                            <i class="bi bi-download"></i> Cài đặt & Cập nhật
+                        </a></li>
+                        <li><a class="dropdown-item" href="/HUONG_DAN_UPDATE.md" target="_blank">
+                            <i class="bi bi-arrow-clockwise"></i> Hướng dẫn Update
+                        </a></li>
+                        <li><a class="dropdown-item" href="/UPDATE_GUIDE.md" target="_blank">
+                            <i class="bi bi-gear"></i> Update Guide (EN)
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="https://github.com/huynd94/TheBrowserShield" target="_blank">
+                            <i class="bi bi-github"></i> GitHub
+                        </a></li>
+                    </ul>
+                </div>
+                <a href="/proxy-manager.html" class="btn btn-outline-light btn-sm me-2">
+                    <i class="bi bi-globe"></i> Proxy
+                </a>
+                <a href="/mode-manager" class="btn btn-outline-light btn-sm me-2">
+                    <i class="bi bi-gear"></i> Mode
+                </a>
+                <a href="/admin" class="btn btn-outline-light btn-sm me-2">
+                    <i class="bi bi-speedometer2"></i> Admin
+                </a>
+                <span class="navbar-text" id="activeSessionsCount">
+                    Active Sessions: <span class="badge bg-success">0</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="bi bi-plus-circle"></i> Tạo Profile Mới</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="createProfileForm">
+                            <div class="mb-3">
+                                <label class="form-label">Tên Profile</label>
+                                <input type="text" class="form-control" id="profileName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">User Agent</label>
+                                <select class="form-select" id="userAgentSelect">
+                                    <option value="">Tự động</option>
+                                    <option value="chrome-windows">Chrome Windows</option>
+                                    <option value="chrome-mac">Chrome Mac</option>
+                                    <option value="firefox-windows">Firefox Windows</option>
+                                    <option value="safari-mac">Safari Mac</option>
+                                    <option value="mobile-ios">Mobile iOS</option>
+                                    <option value="mobile-android">Mobile Android</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Timezone</label>
+                                <select class="form-select" id="timezoneSelect">
+                                    <option value="Asia/Ho_Chi_Minh">Vietnam (GMT+7)</option>
+                                    <option value="America/New_York">New York (GMT-5)</option>
+                                    <option value="Europe/London">London (GMT+0)</option>
+                                    <option value="Asia/Tokyo">Tokyo (GMT+9)</option>
+                                    <option value="Australia/Sydney">Sydney (GMT+10)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Viewport</label>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <input type="number" class="form-control" id="viewportWidth" placeholder="Width" value="1366">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="number" class="form-control" id="viewportHeight" placeholder="Height" value="768">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="spoofFingerprint" checked>
+                                    <label class="form-check-label">
+                                        Anti-Detection (Stealth Mode)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="defaultHeadless">
+                                    <label class="form-check-label">
+                                        Default Headless Mode
+                                    </label>
+                                </div>
+                                <small class="text-muted">Bỏ chọn để mặc định mở browser ở chế độ hiển thị (visible)</small>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="enableProxy">
+                                    <label class="form-check-label">
+                                        Sử dụng Proxy
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="proxySettings" style="display: none;">
+                                <div class="mb-2">
+                                    <select class="form-select form-select-sm" id="proxySource">
+                                        <option value="manual">Nhập thủ công</option>
+                                        <option value="pool">Chọn từ Pool</option>
+                                        <option value="random">Random từ Pool</option>
+                                    </select>
+                                </div>
+                                <div id="manualProxySettings">
+                                    <div class="mb-2">
+                                        <input type="text" class="form-control form-control-sm" id="proxyHost" placeholder="Proxy Host">
+                                    </div>
+                                    <div class="mb-2">
+                                        <input type="number" class="form-control form-control-sm" id="proxyPort" placeholder="Port">
+                                    </div>
+                                    <div class="mb-2">
+                                        <select class="form-select form-select-sm" id="proxyType">
+                                            <option value="http">HTTP</option>
+                                            <option value="https">HTTPS</option>
+                                            <option value="socks4">SOCKS4</option>
+                                            <option value="socks5">SOCKS5</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-2">
+                                        <input type="text" class="form-control form-control-sm" id="proxyUsername" placeholder="Username (tùy chọn)">
+                                    </div>
+                                    <div class="mb-2">
+                                        <input type="password" class="form-control form-control-sm" id="proxyPassword" placeholder="Password (tùy chọn)">
+                                    </div>
+                                </div>
+                                <div id="poolProxySettings" style="display: none;">
+                                    <select class="form-select form-select-sm" id="proxyPoolSelect">
+                                        <option value="">Đang tải...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Auto Navigate URL (tùy chọn)</label>
+                                <input type="url" class="form-control" id="autoNavigateUrl" placeholder="https://bot.sannysoft.com/">
+                                <small class="text-muted">URL sẽ được mở tự động khi start browser</small>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus"></i> Tạo Profile
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6><i class="bi bi-activity"></i> Active Sessions</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="activeSessions">
+                            <p class="text-muted">Không có session nào đang chạy</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4><i class="bi bi-person-workspace"></i> Danh Sách Profiles</h4>
+                    <button class="btn btn-outline-primary" onclick="refreshProfiles()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+
+                <div id="profilesList" class="row">
+                    <!-- Profiles will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Action Modal -->
+    <div class="modal fade" id="profileModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Profile Actions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modalContent">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

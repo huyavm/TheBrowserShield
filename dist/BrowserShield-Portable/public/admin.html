@@ -191,6 +191,26 @@
             overflow-y: auto;
         }
 
+        /* Loading state styles */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+            position: relative;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
         @media (max-width: 768px) {
             .main-content {
                 padding: 0 10px;
@@ -203,6 +223,72 @@
             .btn-action {
                 padding: 3px 8px;
                 font-size: 0.8rem;
+            }
+            
+            /* Proxy section responsive styles */
+            #proxies-section .row.mb-4 .col-md-6 {
+                margin-bottom: 1rem;
+            }
+            
+            #proxies-section .table th,
+            #proxies-section .table td {
+                padding: 0.5rem 0.25rem;
+                font-size: 0.85rem;
+            }
+            
+            #proxies-section .btn-group-sm .btn {
+                padding: 0.2rem 0.4rem;
+                font-size: 0.75rem;
+            }
+            
+            /* Stack proxy form fields on mobile */
+            #addProxyForm .row .col-md-6,
+            #addProxyForm .row .col-md-3 {
+                margin-bottom: 0.5rem;
+            }
+            
+            /* Proxy stats cards - smaller text on mobile */
+            #proxies-section .stats-number {
+                font-size: 1.8rem;
+            }
+            
+            #proxies-section .stats-label {
+                font-size: 0.75rem;
+            }
+            
+            /* Bulk import textarea - smaller on mobile */
+            #bulkProxyInput {
+                font-size: 0.85rem;
+            }
+            
+            /* Hide some columns on very small screens */
+            #proxyTable th:nth-child(4),
+            #proxyTable td:nth-child(4),
+            #proxyTable th:nth-child(5),
+            #proxyTable td:nth-child(5) {
+                display: none;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            /* Extra small screens - further adjustments */
+            #proxies-section .stats-number {
+                font-size: 1.5rem;
+            }
+            
+            #proxies-section .card-header h5,
+            #proxies-section .card-header h6 {
+                font-size: 0.9rem;
+            }
+            
+            /* Stack action buttons vertically on very small screens */
+            #proxies-section .btn-group {
+                flex-direction: column;
+            }
+            
+            #proxies-section .btn-group .btn {
+                border-radius: 0.25rem !important;
+                margin-bottom: 2px;
             }
         }
     </style>
@@ -233,6 +319,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#logs" onclick="showSection('logs')">
                             <i class="fas fa-list me-1"></i>Logs
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#proxies" onclick="showSection('proxies')">
+                            <i class="fas fa-server me-1"></i>Proxies
                         </a>
                     </li>
                 </ul>
@@ -386,6 +477,67 @@
                                     <label class="form-label">Auto Navigate URL</label>
                                     <input type="url" class="form-control" id="autoNavigateUrl" placeholder="https://example.com">
                                 </div>
+                                
+                                <!-- Proxy Configuration Section -->
+                                <div class="card mt-3">
+                                    <div class="card-header py-2">
+                                        <i class="fas fa-globe me-1"></i> Proxy Configuration (Optional)
+                                    </div>
+                                    <div class="card-body">
+                                        <!-- Proxy Source Selection -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Proxy Source</label>
+                                            <select class="form-select" id="createProxySource" onchange="browserShieldAdmin.handleCreateProxySourceChange()">
+                                                <option value="none" selected>No Proxy</option>
+                                                <option value="pool">Select from Proxy Pool</option>
+                                                <option value="manual">Enter Manually</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <!-- Proxy Pool Dropdown (shown when source = pool) -->
+                                        <div id="createProxyPoolSection" style="display: none;">
+                                            <div class="mb-3">
+                                                <label class="form-label">Select Proxy</label>
+                                                <select class="form-select" id="createProxyPool" onchange="browserShieldAdmin.populateCreateProxyFromPool()">
+                                                    <option value="">Loading proxies...</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Manual Proxy Input (shown when source = manual or pool selected) -->
+                                        <div id="createManualProxySection" style="display: none;">
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Host</label>
+                                                    <input type="text" class="form-control" id="createProxyHost" placeholder="proxy.example.com">
+                                                </div>
+                                                <div class="col-md-3 mb-3">
+                                                    <label class="form-label">Port</label>
+                                                    <input type="number" class="form-control" id="createProxyPort" placeholder="8080" min="1" max="65535">
+                                                </div>
+                                                <div class="col-md-3 mb-3">
+                                                    <label class="form-label">Type</label>
+                                                    <select class="form-select" id="createProxyType">
+                                                        <option value="http">HTTP</option>
+                                                        <option value="https">HTTPS</option>
+                                                        <option value="socks4">SOCKS4</option>
+                                                        <option value="socks5">SOCKS5</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Username (optional)</label>
+                                                    <input type="text" class="form-control" id="createProxyUsername" placeholder="username">
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Password (optional)</label>
+                                                    <input type="password" class="form-control" id="createProxyPassword" placeholder="password">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </form>
                         </div>
                         <div class="modal-footer">
@@ -488,6 +640,176 @@
                 <div class="card-body">
                     <div class="console-output" id="serverConsole" style="max-height: 300px; min-height: 150px;">
                         <span class="text-muted">> Server console ready. Enable "Live Logs" to see real-time server output.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Proxies Section -->
+        <div id="proxies-section" class="section" style="display: none;">
+            <!-- Proxy Stats Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="card-body text-center">
+                            <div class="stats-number" id="proxyTotal">0</div>
+                            <div class="stats-label">Total Proxies</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card stats-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                        <div class="card-body text-center">
+                            <div class="stats-number" id="proxyActive">0</div>
+                            <div class="stats-label">Active Proxies</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <div class="card-body text-center">
+                            <div class="stats-number" id="proxyUsage">0</div>
+                            <div class="stats-label">Total Usage</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="card stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <div class="card-body text-center">
+                            <div class="stats-number" id="proxyCountries">0</div>
+                            <div class="stats-label">Countries</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Proxy Form -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-plus-circle me-2"></i>Add Single Proxy
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="addProxyForm" onsubmit="browserShieldAdmin.addProxy(event)">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Host <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="proxyHost" placeholder="192.168.1.1" required>
+                                        <div class="invalid-feedback">Host is required</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Port <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" id="proxyPort" placeholder="8080" min="1" max="65535" required>
+                                        <div class="invalid-feedback">Valid port is required (1-65535)</div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Type</label>
+                                        <select class="form-select" id="proxyType">
+                                            <option value="http">HTTP</option>
+                                            <option value="https">HTTPS</option>
+                                            <option value="socks4">SOCKS4</option>
+                                            <option value="socks5">SOCKS5</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Country</label>
+                                        <input type="text" class="form-control" id="proxyCountry" placeholder="US">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Username</label>
+                                        <input type="text" class="form-control" id="proxyUsername" placeholder="Optional">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="proxyPassword" placeholder="Optional">
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Provider</label>
+                                    <input type="text" class="form-control" id="proxyProvider" placeholder="Optional (e.g., Luminati, Oxylabs)">
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-plus me-2"></i>Add Proxy
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-file-import me-2"></i>Bulk Import Proxies
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Proxy List</label>
+                                <textarea class="form-control" id="bulkProxyInput" rows="10" placeholder="Enter proxies, one per line:
+host:port
+host:port:username:password
+192.168.1.1:8080
+proxy.example.com:3128:user:pass"></textarea>
+                                <small class="text-muted">Format: host:port or host:port:username:password</small>
+                            </div>
+                            <button type="button" class="btn btn-success w-100" onclick="browserShieldAdmin.importBulkProxies()">
+                                <i class="fas fa-file-import me-2"></i>Import Proxies
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Proxy Table -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-server me-2"></i>Proxy Pool
+                            </h5>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" onclick="browserShieldAdmin.loadProxies()">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="browserShieldAdmin.deleteAllProxies()">
+                                    <i class="fas fa-trash"></i> Delete All
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive scrollable-table">
+                                <table class="table table-hover" id="proxyTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 80px;">Status</th>
+                                            <th>Host:Port</th>
+                                            <th style="width: 100px;">Type</th>
+                                            <th style="width: 100px;">Country</th>
+                                            <th style="width: 80px;">Usage</th>
+                                            <th style="width: 180px;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="proxyTableBody">
+                                        <tr>
+                                            <td colspan="6" class="text-center p-4">
+                                                <div class="spinner-border text-primary" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                <p class="mt-2 mb-0">Loading proxies...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -72,6 +72,79 @@ set PORT=3000 && node server.js
 
 ---
 
+### 🔧 Build Windows Installer (Dành cho Developer)
+
+Tạo file setup .exe hoàn chỉnh cho Windows 10/11 với Inno Setup.
+
+#### Prerequisites
+
+1. **Inno Setup 6.x** - Tải và cài đặt từ: https://jrsoftware.org/isinfo.php
+   - Chọn phiên bản Unicode
+   - Thêm vào PATH hoặc cài đặt vào thư mục mặc định
+
+2. **Node.js 18+** - Đã cài đặt trên máy build
+
+3. **Windows 10/11 64-bit** - Build script chỉ chạy trên Windows
+
+#### Build Commands
+
+```cmd
+# Clone repository (nếu chưa có)
+git clone https://github.com/huynd94/TheBrowserShield.git
+cd TheBrowserShield
+
+# Cài đặt dependencies
+npm install
+
+# Build installer
+npm run build:installer
+```
+
+#### Build Process
+
+Script `build:installer` sẽ tự động:
+1. Download Node.js 20.x LTS portable
+2. Copy application files
+3. Cài đặt production dependencies
+4. Generate Inno Setup script
+5. Compile thành file .exe
+
+#### Output Location
+
+```
+dist/
+└── installer/
+    └── BrowserShield-Setup-{version}.exe
+```
+
+File installer sẽ có kích thước khoảng 100-150MB và bao gồm:
+- Node.js runtime (không cần cài Node.js riêng)
+- Tất cả dependencies đã pre-built
+- Native modules (better-sqlite3) cho Windows 64-bit
+
+#### Silent Installation (cho IT Admin)
+
+```cmd
+# Cài đặt silent với đường dẫn mặc định
+BrowserShield-Setup-1.4.0.exe /S
+
+# Cài đặt silent với đường dẫn tùy chỉnh
+BrowserShield-Setup-1.4.0.exe /S /D=D:\Apps\BrowserShield
+
+# Log file được tạo tại: %TEMP%\BrowserShield-Install.log
+```
+
+#### Troubleshooting Build
+
+| Lỗi | Nguyên nhân | Giải pháp |
+|-----|-------------|-----------|
+| `ISCC not found` | Inno Setup chưa cài | Cài Inno Setup và thêm vào PATH |
+| `Download failed` | Lỗi mạng | Kiểm tra kết nối, thử lại |
+| `npm install failed` | Thiếu build tools | Cài Visual Studio Build Tools |
+| `Access denied` | Thiếu quyền | Chạy CMD với quyền Admin |
+
+---
+
 ### Oracle Linux 9 / RHEL (Server)
 
 **One-line installer:**

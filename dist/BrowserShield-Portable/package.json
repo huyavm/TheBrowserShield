@@ -9,7 +9,9 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "build": "node scripts/build-portable.js",
-    "build:portable": "node scripts/build-portable.js"
+    "build:portable": "node scripts/build-portable.js",
+    "build:installer": "node scripts/installer/build-installer.js",
+    "generate:icon": "node scripts/generate-icon.js"
   },
   "keywords": [],
   "author": "",

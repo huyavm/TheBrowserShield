@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Control - BrowserShield</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .browser-frame {
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .browser-toolbar {
+            background: linear-gradient(135deg, #495057, #6c757d);
+            color: white;
+            padding: 10px;
+            border-radius: 6px 6px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .url-bar {
+            flex: 1;
+            margin: 0 10px;
+        }
+        
+        .browser-content {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #e9ecef, #f8f9fa);
+            position: relative;
+        }
+        
+        .mock-browser {
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .control-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .control-header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .action-btn {
+            margin: 5px;
+            min-width: 120px;
+        }
+        
+        .console-output {
+            background: #212529;
+            color: #28a745;
+            font-family: 'Courier New', monospace;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-running { background-color: #28a745; }
+        .status-stopped { background-color: #dc3545; }
+        .status-loading { background-color: #ffc107; animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .screenshot-area {
+            border: 2px dashed #dee2e6;
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        
+        .remote-screen {
+            width: 100%;
+            height: 450px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .vnc-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-shield-lock"></i>
+                BrowserShield - Remote Control
+            </a>
+            <div class="d-flex">
+                <a href="/" class="btn btn-outline-light btn-sm me-2">
+                    <i class="bi bi-house"></i> Home
+                </a>
+                <a href="/admin" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-speedometer2"></i> Admin
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Profile Info -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">
+                                    <span class="status-indicator status-running"></span>
+                                    <span id="profileName">Default Profile</span>
+                                </h5>
+                                <small class="text-muted">
+                                    <i class="bi bi-globe"></i> <span id="currentUrl">about:blank</span> |
+                                    <i class="bi bi-clock"></i> Uptime: <span id="sessionUptime">0m 0s</span> |
+                                    <i class="bi bi-cpu"></i> Mode: <span id="browserMode">Mock</span> |
+                                    <i class="bi bi-eye"></i> Display: <span id="displayMode">Unknown</span>
+                                </small>
+                            </div>
+                            <div>
+                                <button class="btn btn-outline-danger btn-sm" onclick="stopSession()">
+                                    <i class="bi bi-stop-fill"></i> Stop Session
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visible Mode Banner -->
+        <div class="row mb-3" id="visibleModeBanner" style="display: none;">
+            <div class="col-12">
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <h5 class="alert-heading"><i class="bi bi-eye-fill"></i> Browser đang chạy ở chế độ Visible</h5>
+                    <p class="mb-2">Cửa sổ trình duyệt đã được mở trên màn hình của bạn. Bạn có thể:</p>
+                    <ul class="mb-2">
+                        <li>Tương tác trực tiếp với trình duyệt bằng chuột và bàn phím</li>
+                        <li>Sử dụng các điều khiển bên dưới để navigate và thực thi script</li>
+                        <li>Đóng cửa sổ trình duyệt hoặc nhấn "Stop Session" để kết thúc</li>
+                    </ul>
+                    <hr>
+                    <p class="mb-0"><small><i class="bi bi-info-circle"></i> Lưu ý: Trong chế độ visible, bạn có thể thấy và tương tác với trình duyệt như đang sử dụng trên máy tính của mình.</small></p>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Headless Mode Banner -->
+        <div class="row mb-3" id="headlessModeBanner" style="display: none;">
+            <div class="col-12">
+                <div class="alert alert-secondary" role="alert">
+                    <i class="bi bi-eye-slash"></i> <strong>Headless Mode:</strong> Browser đang chạy ở chế độ ẩn (không có giao diện). Sử dụng các điều khiển bên dưới để tương tác với browser.
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Control Panel -->
+            <div class="col-md-4">
+                <div class="control-panel">
+                    <div class="control-header">
+                        <h6 class="mb-0">
+                            <i class="bi bi-gear"></i> Browser Controls
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <!-- Navigation -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Navigation</label>
+                            <div class="input-group mb-2">
+                                <input type="url" class="form-control" id="navigationUrl" 
+                                       placeholder="https://example.com" value="https://bot.sannysoft.com/">
+                                <button class="btn btn-primary" onclick="navigateToUrl()">
+                                    <i class="bi bi-arrow-right"></i>
+                                </button>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-secondary btn-sm" onclick="browserAction('back')">
+                                    <i class="bi bi-arrow-left"></i> Back
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="browserAction('forward')">
+                                    <i class="bi bi-arrow-right"></i> Forward
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" onclick="browserAction('reload')">
+                                    <i class="bi bi-arrow-clockwise"></i> Reload
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Quick Actions</label>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success btn-sm action-btn" onclick="takeScreenshot()">
+                                    <i class="bi bi-camera"></i> Take Screenshot
+                                </button>
+                                <button class="btn btn-info btn-sm action-btn" onclick="getPageInfo()">
+                                    <i class="bi bi-info-circle"></i> Get Page Info
+                                </button>
+                                <button class="btn btn-warning btn-sm action-btn" onclick="clearCookies()">
+                                    <i class="bi bi-trash"></i> Clear Cookies
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- JavaScript Console -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">JavaScript Console</label>
+                            <textarea class="form-control mb-2" id="jsConsole" rows="4" 
+                                      placeholder="Enter JavaScript code here...">
+// Examples:
+document.title
+window.location.href
+document.querySelector('h1')?.textContent</textarea>
+                            <button class="btn btn-warning" onclick="executeJavaScript()">
+                                <i class="bi bi-code-slash"></i> Execute
+                            </button>
+                        </div>
+
+                        <!-- Automation Scripts -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Automation</label>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary btn-sm" onclick="runScript('fillForm')">
+                                    <i class="bi bi-input-cursor"></i> Auto Fill Form
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="runScript('clickFirst')">
+                                    <i class="bi bi-cursor"></i> Click First Button
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm" onclick="runScript('scrollDown')">
+                                    <i class="bi bi-arrow-down"></i> Scroll Down
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Output Console -->
+                        <div>
+                            <label class="form-label fw-bold">Console Output</label>
+                            <div class="console-output" id="consoleOutput">
+                                > Browser control interface ready
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Browser Frame -->
+            <div class="col-md-8">
+                <div class="browser-frame">
+                    <div class="browser-toolbar">
+                        <button class="btn btn-sm btn-outline-light" onclick="browserAction('back')">
+                            <i class="bi bi-arrow-left"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="browserAction('forward')">
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-light" onclick="browserAction('reload')">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <div class="url-bar">
+                            <input type="text" class="form-control form-control-sm" id="urlDisplay" 
+                                   value="about:blank" readonly>
+                        </div>
+                        <button class="btn btn-sm btn-outline-light" onclick="takeScreenshot()">
+                            <i class="bi bi-camera"></i>
+                        </button>
+                    </div>
+                    <div class="browser-content">
+                        <div class="remote-screen" id="browserScreen">
+                            <div class="vnc-placeholder" id="browserPlaceholder">
+                                <div class="mock-browser" id="mockBrowserContent">
+                                    <i class="bi bi-browser-chrome" style="font-size: 4rem; color: #dee2e6;"></i>
+                                    <h4 class="mt-3">Remote Browser Display</h4>
+                                    <p>In production mode, this would show the actual browser screen.</p>
+                                    <p class="small text-muted" id="browserPlaceholderText">
+                                        Current Mode: <strong>Mock Mode</strong><br>
+                                        Switch to Production Mode for real browser control
+                                    </p>
+                                    <div class="mt-4">
+                                        <a href="/mode-manager" class="btn btn-primary" target="_blank">
+                                            <i class="bi bi-gear"></i> Switch Mode
+                                        </a>
+                                    </div>
+                                </div>
+                                <!-- Visible Mode Content -->
+                                <div class="visible-browser-info" id="visibleBrowserContent" style="display: none;">
+                                    <i class="bi bi-window-desktop" style="font-size: 4rem; color: #28a745;"></i>
+                                    <h4 class="mt-3 text-success">Browser Window is Open</h4>
+                                    <p>Cửa sổ trình duyệt đang hiển thị trên màn hình của bạn.</p>
+                                    <p class="small text-muted">
+                                        <i class="bi bi-info-circle"></i> Bạn có thể tương tác trực tiếp với cửa sổ trình duyệt<br>
+                                        hoặc sử dụng các điều khiển bên trái để navigate và thực thi script.
+                                    </p>
+                                    <div class="mt-4">
+                                        <button class="btn btn-outline-success" onclick="getPageInfo()">
+                                            <i class="bi bi-info-circle"></i> Get Page Info
+                                        </button>
+                                        <button class="btn btn-outline-primary" onclick="takeScreenshot()">
+                                            <i class="bi bi-camera"></i> Screenshot
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentProfileId = new URLSearchParams(window.location.search).get('profile') || 'default';
+        let sessionStartTime = Date.now();
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCurrentMode();
+            loadProfileInfo();
+            startUptimeCounter();
+            logToConsole('Remote browser control initialized');
+        });
+
+        async function loadCurrentMode() {
+            try {
+                const response = await fetch('/api/mode');
+                const data = await response.json();
+                if (data.success) {
+                    const mode = data.data.currentMode;
+                    const modeDisplay = mode === 'mock' ? 'Mock Mode' : 
+                                      mode === 'production' ? 'Production Mode' : 
+                                      mode === 'firefox' ? 'Firefox Mode' : 'Unknown Mode';
+                    
+                    document.getElementById('browserMode').textContent = modeDisplay;
+                    
+                    // Update mock browser display based on mode
+                    const mockBrowser = document.querySelector('.mock-browser p.small');
+                    if (mockBrowser) {
+                        mockBrowser.innerHTML = `
+                            Current Mode: <strong>${modeDisplay}</strong><br>
+                            ${mode === 'mock' ? 'Switch to Production or Firefox Mode for real browser control' : 'Real browser automation available'}
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to load current mode:', error);
+            }
+        }
+
+        async function loadProfileInfo() {
+            // Get profile name from URL params
+            const profileName = new URLSearchParams(window.location.search).get('name') || 'Unknown Profile';
+            document.getElementById('profileName').textContent = decodeURIComponent(profileName);
+            
+            // Load session status to get headless mode info
+            try {
+                const response = await fetch(`/api/profiles/${currentProfileId}/status`);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const session = data.data;
+                    const isHeadless = session.headless === true;
+                    
+                    // Update display mode indicator
+                    const displayModeEl = document.getElementById('displayMode');
+                    if (isHeadless) {
+                        displayModeEl.textContent = 'Headless';
+                        displayModeEl.className = 'badge bg-secondary';
+                        document.getElementById('headlessModeBanner').style.display = 'block';
+                        document.getElementById('visibleModeBanner').style.display = 'none';
+                        // Show mock browser content for headless mode
+                        document.getElementById('mockBrowserContent').style.display = 'block';
+                        document.getElementById('visibleBrowserContent').style.display = 'none';
+                    } else {
+                        displayModeEl.textContent = 'Visible';
+                        displayModeEl.className = 'badge bg-success';
+                        document.getElementById('visibleModeBanner').style.display = 'block';
+                        document.getElementById('headlessModeBanner').style.display = 'none';
+                        // Show visible browser content
+                        document.getElementById('mockBrowserContent').style.display = 'none';
+                        document.getElementById('visibleBrowserContent').style.display = 'block';
+                    }
+                    
+                    // Update current URL if available
+                    if (session.currentUrl) {
+                        document.getElementById('currentUrl').textContent = session.currentUrl;
+                        document.getElementById('urlDisplay').value = session.currentUrl;
+                    }
+                    
+                    logToConsole(`Session loaded: ${isHeadless ? 'Headless' : 'Visible'} mode`, 'success');
+                } else {
+                    document.getElementById('displayMode').textContent = 'Unknown';
+                }
+            } catch (error) {
+                console.warn('Failed to load session status:', error);
+                document.getElementById('displayMode').textContent = 'Unknown';
+            }
+        }
+
+        function startUptimeCounter() {
+            setInterval(() => {
+                const uptime = Math.floor((Date.now() - sessionStartTime) / 1000);
+                const minutes = Math.floor(uptime / 60);
+                const seconds = uptime % 60;
+                document.getElementById('sessionUptime').textContent = `${minutes}m ${seconds}s`;
+            }, 1000);
+        }
+
+        function logToConsole(message, type = 'info') {
+            const console = document.getElementById('consoleOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#28a745';
+            
+            console.innerHTML += `\n<span style="color: ${color}">[${timestamp}] ${message}</span>`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        async function navigateToUrl() {
+            const url = document.getElementById('navigationUrl').value;
+            if (!url) {
+                logToConsole('Please enter a URL', 'error');
+                return;
+            }
+
+            logToConsole(`Navigating to: ${url}`);
+            document.getElementById('urlDisplay').value = url;
+            document.getElementById('currentUrl').textContent = url;
+
+            try {
+                const response = await fetch(`/api/profiles/${currentProfileId}/navigate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    logToConsole(`Navigation successful: ${url}`, 'success');
+                } else {
+                    logToConsole(`Navigation failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                logToConsole(`Connection error: ${error.message}`, 'error');
+            }
+        }
+
+        async function executeJavaScript() {
+            const code = document.getElementById('jsConsole').value;
+            if (!code.trim()) {
+                logToConsole('Please enter JavaScript code', 'error');
+                return;
+            }
+
+            logToConsole(`Executing: ${code.split('\n')[0]}...`);
+
+            try {
+                const response = await fetch(`/api/profiles/${currentProfileId}/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ script: code })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    logToConsole(`Result: ${JSON.stringify(data.data.result)}`, 'success');
+                } else {
+                    logToConsole(`Execution failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                logToConsole(`Connection error: ${error.message}`, 'error');
+            }
+        }
+
+        function browserAction(action) {
+            logToConsole(`Browser action: ${action}`);
+            
+            switch(action) {
+                case 'back':
+                    executeJavaScript_direct('history.back()');
+                    break;
+                case 'forward':
+                    executeJavaScript_direct('history.forward()');
+                    break;
+                case 'reload':
+                    executeJavaScript_direct('location.reload()');
+                    break;
+            }
+        }
+
+        async function executeJavaScript_direct(code) {
+            try {
+                const response = await fetch(`/api/profiles/${currentProfileId}/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ script: code })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    logToConsole(`Action completed`, 'success');
+                } else {
+                    logToConsole(`Action failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                logToConsole(`Connection error: ${error.message}`, 'error');
+            }
+        }
+
+        async function takeScreenshot() {
+            logToConsole('Taking screenshot...');
+            
+            try {
+                // In production mode, this would capture actual screenshot
+                logToConsole('Screenshot captured successfully', 'success');
+                logToConsole('Note: In production mode, screenshot would be saved and displayed');
+            } catch (error) {
+                logToConsole(`Screenshot failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function getPageInfo() {
+            logToConsole('Getting page information...');
+            
+            const infoScript = `
+                JSON.stringify({
+                    url: window.location.href,
+                    title: document.title,
+                    userAgent: navigator.userAgent,
+                    viewport: { width: window.innerWidth, height: window.innerHeight },
+                    elements: document.querySelectorAll('*').length,
+                    cookies: document.cookie.split(';').length
+                }, null, 2)
+            `;
+
+            try {
+                const response = await fetch(`/api/profiles/${currentProfileId}/execute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ script: infoScript })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    logToConsole('Page Info:', 'success');
+                    logToConsole(data.data.result, 'info');
+                } else {
+                    logToConsole(`Failed to get page info: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                logToConsole(`Connection error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearCookies() {
+            logToConsole('Clearing cookies...');
+            executeJavaScript_direct(`
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+            `);
+        }
+
+        function runScript(scriptType) {
+            let script = '';
+            
+            switch(scriptType) {
+                case 'fillForm':
+                    script = `
+                        const inputs = document.querySelectorAll('input[type="text"], input[type="email"]');
+                        inputs.forEach((input, index) => {
+                            if (input.type === 'email') input.value = 'test@example.com';
+                            else input.value = 'Test Value ' + (index + 1);
+                        });
+                        'Filled ' + inputs.length + ' form fields';
+                    `;
+                    break;
+                case 'clickFirst':
+                    script = `
+                        const button = document.querySelector('button, a, input[type="submit"]');
+                        if (button) {
+                            button.click();
+                            'Clicked: ' + button.tagName;
+                        } else {
+                            'No clickable element found';
+                        }
+                    `;
+                    break;
+                case 'scrollDown':
+                    script = `
+                        window.scrollBy(0, window.innerHeight);
+                        'Scrolled down ' + window.innerHeight + 'px';
+                    `;
+                    break;
+            }
+
+            if (script) {
+                document.getElementById('jsConsole').value = script;
+                executeJavaScript();
+            }
+        }
+
+        function stopSession() {
+            if (confirm('Are you sure you want to stop this browser session?')) {
+                logToConsole('Stopping browser session...', 'error');
+                window.location.href = '/';
+            }
+        }
+    </script>
+</body>
+</html>

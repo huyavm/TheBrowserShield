@@ -117,4 +117,4 @@ Backup cac thu muc/file sau:
 ## Phien Ban
 
 Version: 1.4.0
-Build Date: 2025-12-26
+Build Date: 2025-12-30

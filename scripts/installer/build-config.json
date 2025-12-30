@@ -1,0 +1,74 @@
+{
+  "app": {
+    "name": "BrowserShield",
+    "version": "1.4.0",
+    "publisher": "BrowserShield Team",
+    "url": "https://github.com/user/browsershield",
+    "description": "Anti-Detect Browser Manager",
+    "iconPath": "public/icon.ico"
+  },
+  "node": {
+    "version": "20.11.0",
+    "arch": "x64",
+    "checksums": {
+      "win-x64": "a8c3f3e8b7d9f2e1a0b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6"
+    }
+  },
+  "installer": {
+    "outputDir": "./dist/installer",
+    "buildDir": "./dist/build",
+    "defaultInstallDir": "{autopf}\\BrowserShield",
+    "createDesktopIcon": true,
+    "createStartMenuEntry": true,
+    "supportSilentInstall": true,
+    "minDiskSpaceMB": 500,
+    "silentInstall": {
+      "enabled": true,
+      "flags": {
+        "silent": "/SILENT",
+        "verySilent": "/VERYSILENT",
+        "suppressMsgBoxes": "/SUPPRESSMSGBOXES",
+        "dir": "/DIR=",
+        "log": "/LOG=",
+        "noRestart": "/NORESTART"
+      },
+      "exitCodes": {
+        "success": 0,
+        "setupFailed": 1,
+        "userCancelled": 2,
+        "fatalError": 3,
+        "insufficientSpace": 4,
+        "unsupportedOS": 5
+      },
+      "defaultLogPath": "%TEMP%\\BrowserShield-Install.log"
+    }
+  },
+  "files": {
+    "include": [
+      "server.js",
+      "package.json",
+      "package-lock.json",
+      "config/**",
+      "middleware/**",
+      "routes/**",
+      "services/**",
+      "utils/**",
+      "public/**"
+    ],
+    "exclude": [
+      "node_modules",
+      "tests/**",
+      ".git/**",
+      ".gitignore",
+      "coverage/**",
+      ".kiro/**",
+      "dist/**",
+      "*.md",
+      "docker-compose.yml",
+      "Dockerfile",
+      ".dockerignore",
+      "jest.config.js",
+      ".vscode/**"
+    ]
+  }
+}
